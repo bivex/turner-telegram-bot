@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 // Настройка базового URL для API (используем относительные пути для прокси)
 // axios.defaults.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
@@ -9,6 +10,7 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
 
   useEffect(() => {
     // Проверка токена при загрузке
@@ -29,7 +31,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Ошибка входа' };
+      return { success: false, error: error.response?.data?.message || t('login.error') };
     }
   };
 

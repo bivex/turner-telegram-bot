@@ -6,6 +6,7 @@ import {
   BarChartOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 
 const Dashboard = () => {
@@ -15,6 +16,7 @@ const Dashboard = () => {
     active_orders: 0
   });
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   useEffect(() => {
     fetchStats();
@@ -31,13 +33,13 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-content">
-      <h1>📊 Дашборд</h1>
+      <h1>{t('dashboard.title')}</h1>
 
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={8}>
           <Card>
             <Statistic
-              title="Всего заказов"
+              title={t('dashboard.total_orders')}
               value={stats.total_orders}
               prefix={<BarChartOutlined />}
             />
@@ -46,7 +48,7 @@ const Dashboard = () => {
         <Col span={8}>
           <Card>
             <Statistic
-              title="Новых заказов"
+              title={t('dashboard.new_orders')}
               value={stats.new_orders}
               prefix={<ShoppingCartOutlined />}
               valueStyle={{ color: '#52c41a' }}
@@ -56,7 +58,7 @@ const Dashboard = () => {
         <Col span={8}>
           <Card>
             <Statistic
-              title="Активных заказов"
+              title={t('dashboard.active_orders')}
               value={stats.active_orders}
               prefix={<ShoppingCartOutlined />}
               valueStyle={{ color: '#1890ff' }}
@@ -65,20 +67,20 @@ const Dashboard = () => {
         </Col>
       </Row>
 
-      <Card title="Быстрые действия" style={{ marginTop: 24 }}>
+      <Card title={t('dashboard.quick_actions')} style={{ marginTop: 24 }}>
         <Button
           type="primary"
           icon={<ShoppingCartOutlined />}
           onClick={() => navigate('/orders')}
           style={{ marginRight: 8 }}
         >
-          Просмотр заказов
+          {t('dashboard.view_orders')}
         </Button>
         <Button
           icon={<SettingOutlined />}
           onClick={() => navigate('/bot-config')}
         >
-          Настройки бота
+          {t('dashboard.bot_settings_btn')}
         </Button>
       </Card>
     </div>

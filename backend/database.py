@@ -142,3 +142,27 @@ def update_bot_config(key, value):
             """, (key, value, value))
     finally:
         conn.close()
+
+def get_user_language(user_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT language FROM user_prefs WHERE user_id=%s", (user_id,))
+            res = cur.fetchone()
+        return res['language'] if res else 'ru'
+    except Exception:
+        return 'ru'
+    finally:
+        conn.close()
+
+def set_user_language(user_id, lang):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO user_prefs (user_id, language) VALUES (%s, %s) "
+                "ON DUPLICATE KEY UPDATE language=%s",
+                (user_id, lang, lang)
+            )
+    finally:
+        conn.close()

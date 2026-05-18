@@ -57,4 +57,16 @@ INSERT IGNORE INTO `bot_config` (`cfg_key`, `cfg_value`, `description`) VALUES
 ('step_final_text', '✍️ *Финал.*\nНапишите комментарий если Вам есть что добавить и уточнить к заказу.', 'Вопрос в конце'),
 ('msg_done', '✅ *Заказ принят!* Я отвечу в этот чат в ближайшее время.', 'Сообщение об успехе'),
 ('err_photo_required', '⚠️ Я не могу принять заказ без фото. Пожалуйста, пришлите фото.', 'Ошибка: нет фото'),
-('admin_chat_id', '0', 'ID админа (заполнится само)');
+('admin_chat_id', '0', 'ID админа (заполнится само)'),
+('msg_order_canceled', '❌ Заказ отменен. Отправьте /start для нового.', 'Сообщение об отмене'),
+('err_admin_not_set', '⚠️ Администратор еще не настроен.', 'Ошибка: админ не задан'),
+('err_no_active_order', 'У вас нет активных заказов. Отправьте /start для нового.', 'Ошибка: нет активного заказа'),
+('step_extra_text', '📝 *Дополнительно*\nЕсть ли еще что-то важное по детали?', 'Дополнительный вопрос'),
+('step_extra_enabled', '0', '1 = Доп. вопрос включен, 0 = Выключен');
+
+-- Таблица языковых предпочтений пользователей
+CREATE TABLE IF NOT EXISTS `user_prefs` (
+  `user_id` bigint(20) NOT NULL,
+  `language` varchar(5) NOT NULL DEFAULT 'ru',
+  PRIMARY KEY (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

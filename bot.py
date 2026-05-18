@@ -12,15 +12,13 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMar
 
 import config
 import database
+import i18n
 
-# Настройка логов
 logging.basicConfig(level=logging.INFO)
 
-# Инициализация
 bot = Bot(token=config.BOT_TOKEN)
 dp = Dispatcher()
 
-# --- Машина состояний ---
 class OrderForm(StatesGroup):
     photo = State()
     work_type = State()
@@ -30,249 +28,272 @@ class OrderForm(StatesGroup):
     extra_q = State()
     comment = State()
 
-# --- ПОМОЩНИКИ ---
-def get_text(key):
-    """
-    Берет текст ТОЛЬКО из базы.
-    Если ключа нет - вернет заглушку [NO_DB_TEXT: key], чтобы мы видели ошибку.
-    """
+# --- HELPERS ---
+def _lang(user_id: int) -> str:
+    return database.get_user_language(user_id)
+
+def _admin_lang() -> str:
     cfg = database.get_bot_config()
-    val = cfg.get(key)
-    if val: return val
-    return f"[NO_DB_TEXT: {key}]" # Если видишь это в боте - значит в базе нет этой строки
+    aid = cfg.get("admin_chat_id", "0")
+    if aid and aid != '0':
+        return database.get_user_language(int(aid))
+    return 'ru'
 
 def get_config_bool(key):
     cfg = database.get_bot_config()
     return str(cfg.get(key, '0')) == '1'
 
-def safe_text(message: types.Message):
+def safe_text(message: types.Message, lang: str = 'ru'):
     if message.text: return message.text
     if message.caption: return message.caption
-    if message.sticker: return "[Стикер]"
-    if message.photo: return "[Фото]"
-    return "[Неизвестно]"
+    if message.sticker: return i18n.t('safe_sticker', lang)
+    if message.photo: return i18n.t('safe_photo', lang)
+    return i18n.t('safe_unknown', lang)
 
 async def forward_message_to_admin(message: types.Message, order_id):
     try:
         cfg = database.get_bot_config()
         admin_id = cfg.get("admin_chat_id", "0")
         if admin_id and admin_id != '0':
-            header = f"📩 <b>Клиент (Заказ №{order_id}):</b>\n"
+            al = _admin_lang()
+            header = i18n.t('msg_client_msg_header', al, order_id=order_id)
             if message.text:
                 await bot.send_message(admin_id, header + message.text, parse_mode="HTML")
             else:
                 await message.copy_to(admin_id)
-                await bot.send_message(admin_id, f"👆 К заказу №{order_id}", parse_mode="HTML")
+                await bot.send_message(admin_id, i18n.t('msg_refers_to_order', al, order_id=order_id), parse_mode="HTML")
         else:
-            # Текст ошибки админа
-            await message.answer(get_text('err_admin_not_set'))
+            lang = _lang(message.from_user.id)
+            await message.answer(i18n.t('err_admin_not_set', lang))
     except Exception as e:
         logging.error(f"Deliver error: {e}")
 
-# --- КЛАВИАТУРЫ ---
-def kb_photo_step():
-    buttons = [[KeyboardButton(text="✅ Все фото отправлены")]]
+# --- KEYBOARDS ---
+def kb_photo_step(lang):
+    buttons = [[KeyboardButton(text=i18n.t('btn_photos_done', lang))]]
     if not get_config_bool('is_photo_required'):
-        buttons.append([KeyboardButton(text=get_text('btn_skip_photo'))])
+        buttons.append([KeyboardButton(text=i18n.t('btn_skip_photo', lang))])
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True, one_time_keyboard=True)
 
-def kb_work_type():
+def kb_work_type(lang):
     buttons = [
-        [InlineKeyboardButton(text=get_text('btn_type_repair'), callback_data="type_repair")],
-        [InlineKeyboardButton(text=get_text('btn_type_copy'), callback_data="type_copy")],
-        [InlineKeyboardButton(text=get_text('btn_type_drawing'), callback_data="type_drawing")]
+        [InlineKeyboardButton(text=i18n.t('btn_type_repair', lang), callback_data="type_repair")],
+        [InlineKeyboardButton(text=i18n.t('btn_type_copy', lang), callback_data="type_copy")],
+        [InlineKeyboardButton(text=i18n.t('btn_type_drawing', lang), callback_data="type_drawing")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def kb_urgency():
+def kb_urgency(lang):
     buttons = [
-        [InlineKeyboardButton(text=get_text('btn_urgency_high'), callback_data="urgency_high")],
-        [InlineKeyboardButton(text=get_text('btn_urgency_med'), callback_data="urgency_med")],
-        [InlineKeyboardButton(text=get_text('btn_urgency_low'), callback_data="urgency_low")]
+        [InlineKeyboardButton(text=i18n.t('btn_urgency_high', lang), callback_data="urgency_high")],
+        [InlineKeyboardButton(text=i18n.t('btn_urgency_med', lang), callback_data="urgency_med")],
+        [InlineKeyboardButton(text=i18n.t('btn_urgency_low', lang), callback_data="urgency_low")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-# --- ЛОГИКА ---
+# --- LOGIC ---
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
     await state.clear()
-    
+    lang = _lang(message.from_user.id)
     user_id = message.from_user.id
-    # Очищаем старые черновики
+
     database.cancel_old_filling_orders(user_id)
-    
+
     username = message.from_user.username or "NoNick"
     full_name = message.from_user.full_name
     order_id = database.create_order(user_id, username, full_name)
-    
+
     await state.update_data(order_id=order_id, photo_ids=[])
-    
-    # СТРОГО ИЗ БАЗЫ
-    welcome = get_text('welcome_msg')
-    await message.answer(f"{welcome}\n\n🆕 <b>Заказ №{order_id}</b>", parse_mode="HTML")
-    
-    await message.answer(get_text('step_photo_text'), reply_markup=kb_photo_step(), parse_mode="Markdown")
+
+    welcome = i18n.t('welcome_msg', lang)
+    label = i18n.t('new_order_label', lang, order_id=order_id)
+    await message.answer(f"{welcome}\n\n{label}", parse_mode="HTML")
+
+    await message.answer(i18n.t('step_photo_text', lang), reply_markup=kb_photo_step(lang), parse_mode="Markdown")
     await state.set_state(OrderForm.photo)
 
 @dp.message(Command("cancel"))
 async def cmd_cancel(message: types.Message, state: FSMContext):
     await state.clear()
-    user_id = message.from_user.id
-    database.cancel_old_filling_orders(user_id)
-    await message.answer(get_text('msg_order_canceled'))
+    lang = _lang(message.from_user.id)
+    database.cancel_old_filling_orders(message.from_user.id)
+    await message.answer(i18n.t('msg_order_canceled', lang))
 
-# 1. ФОТО
+@dp.message(Command("lang"))
+async def cmd_lang(message: types.Message):
+    lang = _lang(message.from_user.id)
+    buttons = []
+    for code, label in i18n.SUPPORTED_LANGUAGES.items():
+        prefix = '✅ ' if code == lang else ''
+        buttons.append([InlineKeyboardButton(text=f"{prefix}{label}", callback_data=f"lang_{code}")])
+    await message.answer(i18n.t('lang_select_prompt', lang), reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+
+@dp.callback_query(F.data.startswith("lang_"))
+async def process_lang(callback: types.CallbackQuery):
+    new_lang = callback.data.split("_")[1]
+    database.set_user_language(callback.from_user.id, new_lang)
+    await callback.message.edit_text(i18n.t('lang_changed', new_lang))
+    await callback.answer()
+
+# 1. PHOTO
 @dp.message(OrderForm.photo, F.photo | F.document)
 async def process_photo(message: types.Message, state: FSMContext):
+    lang = _lang(message.from_user.id)
     data = await state.get_data()
     p_ids = data.get('photo_ids', [])
-    
+
     if message.photo:
         p_ids.append(f"p:{message.photo[-1].file_id}")
     elif message.document and message.document.mime_type.startswith('image/'):
         p_ids.append(f"d:{message.document.file_id}")
     else:
-        await message.answer("⚠️ Пожалуйста, пришлите фото или изображение файлом.")
+        await message.answer(i18n.t('err_send_image_not_other', lang))
         return
 
     await state.update_data(photo_ids=p_ids)
-    await message.answer(f"📸 Фото {len(p_ids)} принято.", reply_markup=kb_photo_step())
+    await message.answer(i18n.t('msg_photo_accepted_count', lang, count=len(p_ids)), reply_markup=kb_photo_step(lang))
 
 @dp.message(OrderForm.photo)
 async def process_photo_done(message: types.Message, state: FSMContext):
-    txt = safe_text(message)
+    lang = _lang(message.from_user.id)
+    txt = safe_text(message, lang)
     data = await state.get_data()
     p_ids = data.get('photo_ids', [])
-    skip_btn = get_text('btn_skip_photo')
+    photos_done_btn = i18n.t('btn_photos_done', lang)
+    skip_btn = i18n.t('btn_skip_photo', lang)
 
-    # 1. Завершить фото
-    if txt == "✅ Все фото отправлены":
+    if txt == photos_done_btn:
         if not p_ids:
-            await message.answer("⚠️ Вы не загрузили ни одного фото.")
+            await message.answer(i18n.t('err_no_photos_uploaded', lang))
             return
         database.update_order_field(data['order_id'], 'photo_file_id', ",".join(p_ids))
-        await message.answer("👍 Фото приняты.", reply_markup=types.ReplyKeyboardRemove())
+        await message.answer(i18n.t('msg_photos_accepted', lang), reply_markup=types.ReplyKeyboardRemove())
         await ask_work_type(message, state)
 
-    # 2. Пропустить
     elif txt == skip_btn:
         if get_config_bool('is_photo_required'):
-             await message.answer(get_text('err_photo_required'))
+            await message.answer(i18n.t('err_photo_required', lang))
         else:
-            await message.answer("👍 Ок, без фото.", reply_markup=types.ReplyKeyboardRemove())
+            await message.answer(i18n.t('msg_ok_no_photo', lang), reply_markup=types.ReplyKeyboardRemove())
             await ask_work_type(message, state)
-            
-    # 3. Левый текст или завис
     else:
-        # Проверяем, есть ли обязаловка фото
         if get_config_bool('is_photo_required') and not p_ids:
-            await message.answer(get_text('err_photo_required'))
+            await message.answer(i18n.t('err_photo_required', lang))
             return
-            
-        # Пробуем восстановить состояние
         await check_lost_state(message, state)
 
 async def ask_work_type(message, state):
-    await message.answer(get_text('step_type_text'), reply_markup=kb_work_type(), parse_mode="Markdown")
+    lang = _lang(message.from_user.id)
+    await message.answer(i18n.t('step_type_text', lang), reply_markup=kb_work_type(lang), parse_mode="Markdown")
     await state.set_state(OrderForm.work_type)
 
-# 2. ТИП
+# 2. WORK TYPE
 @dp.callback_query(OrderForm.work_type)
 async def process_work_type(callback: types.CallbackQuery, state: FSMContext):
+    lang = _lang(callback.from_user.id)
     map_types = {'type_repair': 'btn_type_repair', 'type_copy': 'btn_type_copy', 'type_drawing': 'btn_type_drawing'}
-    # Получаем ключ
     key = map_types.get(callback.data)
-    # Получаем текст из базы
-    human = get_text(key)
-    
+    human = i18n.t(key, lang)
+
     database.update_order_field((await state.get_data())['order_id'], 'work_type', human)
-    
-    await callback.message.edit_text(f"✅ {human}")
-    await callback.message.answer(get_text('step_dim_text'), parse_mode="Markdown")
+
+    await callback.message.edit_text(i18n.t('label_chosen', lang, human=human))
+    await callback.message.answer(i18n.t('step_dim_text', lang), parse_mode="Markdown")
     await state.set_state(OrderForm.dimensions)
 
-# 3. РАЗМЕРЫ
+# 3. DIMENSIONS
 @dp.message(OrderForm.dimensions)
 async def process_dimensions(message: types.Message, state: FSMContext):
-    txt = safe_text(message)
+    lang = _lang(message.from_user.id)
+    txt = safe_text(message, lang)
     database.update_order_field((await state.get_data())['order_id'], 'dimensions_info', txt)
-    
+
     btns = [
-        [InlineKeyboardButton(text=get_text('btn_cond_rotation'), callback_data="cond_rotation")],
-        [InlineKeyboardButton(text=get_text('btn_cond_static'), callback_data="cond_static")],
-        [InlineKeyboardButton(text=get_text('btn_cond_impact'), callback_data="cond_impact")],
-        [InlineKeyboardButton(text=get_text('btn_cond_unknown'), callback_data="cond_unknown")]
+        [InlineKeyboardButton(text=i18n.t('btn_cond_rotation', lang), callback_data="cond_rotation")],
+        [InlineKeyboardButton(text=i18n.t('btn_cond_static', lang), callback_data="cond_static")],
+        [InlineKeyboardButton(text=i18n.t('btn_cond_impact', lang), callback_data="cond_impact")],
+        [InlineKeyboardButton(text=i18n.t('btn_cond_unknown', lang), callback_data="cond_unknown")]
     ]
-    await message.answer(get_text('step_cond_text'), reply_markup=InlineKeyboardMarkup(inline_keyboard=btns), parse_mode="Markdown")
+    await message.answer(i18n.t('step_cond_text', lang), reply_markup=InlineKeyboardMarkup(inline_keyboard=btns), parse_mode="Markdown")
     await state.set_state(OrderForm.conditions)
 
-# 4. УСЛОВИЯ
+# 4. CONDITIONS
 @dp.callback_query(OrderForm.conditions)
 async def process_conditions(callback: types.CallbackQuery, state: FSMContext):
+    lang = _lang(callback.from_user.id)
     map_cond = {'cond_rotation': 'btn_cond_rotation', 'cond_static': 'btn_cond_static', 'cond_impact': 'btn_cond_impact', 'cond_unknown': 'btn_cond_unknown'}
-    human = get_text(map_cond.get(callback.data))
-    
+    human = i18n.t(map_cond.get(callback.data), lang)
+
     database.update_order_field((await state.get_data())['order_id'], 'conditions', human)
-    
-    await callback.message.edit_text(f"✅ {human}")
-    await callback.message.answer(get_text('step_urgency_text'), reply_markup=kb_urgency(), parse_mode="Markdown")
+
+    await callback.message.edit_text(i18n.t('label_chosen', lang, human=human))
+    await callback.message.answer(i18n.t('step_urgency_text', lang), reply_markup=kb_urgency(lang), parse_mode="Markdown")
     await state.set_state(OrderForm.urgency)
 
-# 5. СРОЧНОСТЬ
+# 5. URGENCY
 @dp.callback_query(OrderForm.urgency)
 async def process_urgency(callback: types.CallbackQuery, state: FSMContext):
+    lang = _lang(callback.from_user.id)
     map_urg = {'urgency_high': 'btn_urgency_high', 'urgency_med': 'btn_urgency_med', 'urgency_low': 'btn_urgency_low'}
-    human = get_text(map_urg.get(callback.data))
-    
+    human = i18n.t(map_urg.get(callback.data), lang)
+
     database.update_order_field((await state.get_data())['order_id'], 'urgency', human)
-    await callback.message.edit_text(f"✅ {human}")
-    
+    await callback.message.edit_text(i18n.t('label_chosen', lang, human=human))
+
     if get_config_bool('step_extra_enabled'):
-        await callback.message.answer(get_text('step_extra_text'), parse_mode="Markdown")
+        await callback.message.answer(i18n.t('step_extra_text', lang), parse_mode="Markdown")
         await state.set_state(OrderForm.extra_q)
     else:
         await ask_final(callback.message, state)
 
 @dp.message(OrderForm.extra_q)
 async def process_extra(message: types.Message, state: FSMContext):
-    txt = safe_text(message)
-    await state.update_data(temp_comment=f"Доп: {txt}\n")
+    lang = _lang(message.from_user.id)
+    txt = safe_text(message, lang)
+    await state.update_data(temp_comment=i18n.t('msg_extra_prefix', lang, text=txt))
     await ask_final(message, state)
 
 async def ask_final(message, state):
-    await message.answer(get_text('step_final_text'), parse_mode="Markdown")
+    lang = _lang(message.from_user.id)
+    await message.answer(i18n.t('step_final_text', lang), parse_mode="Markdown")
     await state.set_state(OrderForm.comment)
 
-# 6. ФИНАЛ
+# 6. FINAL
 @dp.message(OrderForm.comment)
 async def process_comment(message: types.Message, state: FSMContext):
+    lang = _lang(message.from_user.id)
     data = await state.get_data()
-    comm = safe_text(message)
+    comm = safe_text(message, lang)
     final_comm = data.get('temp_comment', '') + comm
     await finalize_order(message, data['order_id'], final_comm)
     await state.clear()
 
 async def finalize_order(message, order_id, comment_text):
+    lang = _lang(message.from_user.id)
     database.update_order_field(order_id, 'comment', comment_text)
     database.finish_order_creation(order_id)
-    await message.answer(get_text('msg_done'), parse_mode="Markdown")
+    await message.answer(i18n.t('msg_done', lang), parse_mode="Markdown")
     await notify_admin(order_id)
 
 async def notify_admin(order_id):
     cfg = database.get_bot_config()
     aid = cfg.get("admin_chat_id", "0")
-    if not aid or aid == '0': return 
+    if not aid or aid == '0': return
 
+    al = _admin_lang()
     order = database.get_order(order_id)
-    text = (f"🔔 <b>НОВЫЙ ЗАКАЗ №{order['id']}</b>\n"
-            f"👤: {order['full_name']} (@{order['username']})\n"
-            f"🛠: {order['work_type']}\n"
-            f"📏: {order['dimensions_info']}\n"
-            f"⚙️: {order['conditions']}\n"
-            f"⏳: {order['urgency']}\n"
-            f"📝: {order['comment']}\n\n"
-            f"<i>Reply для ответа.</i>")
+    text = i18n.t('msg_new_order_admin', al,
+        order_id=order['id'],
+        full_name=order['full_name'],
+        username=order['username'],
+        work_type=order['work_type'] or '',
+        dimensions=order['dimensions_info'] or '',
+        conditions=order['conditions'] or '',
+        urgency=order['urgency'] or '',
+        comment=order['comment'] or ''
+    )
     try:
         raw_ids = order['photo_file_id'].split(',') if order['photo_file_id'] else []
         media = []
@@ -282,7 +303,6 @@ async def notify_admin(order_id):
             elif rid.startswith('d:'):
                 media.append(types.InputMediaDocument(media=rid[2:]))
             else:
-                # На случай старых записей без префикса
                 media.append(types.InputMediaPhoto(media=rid))
 
         if len(media) > 1:
@@ -299,102 +319,105 @@ async def notify_admin(order_id):
     except Exception as e:
         logging.error(f"Err admin: {e}")
 
-# --- АДМИНКА ---
+# --- ADMIN ---
 @dp.message(Command("iamadmin"))
 async def cmd_admin_auth(message: types.Message):
+    lang = _lang(message.from_user.id)
     args = message.text.split()
     if len(args) > 1 and args[1] == config.BOT_ADMIN_PASSWORD:
         database.update_bot_config("admin_chat_id", str(message.chat.id))
-        await message.answer("✅ Админ авторизован.")
+        await message.answer(i18n.t('msg_admin_authorized', lang))
     else:
-        await message.answer("❌ Неверный пароль.")
+        await message.answer(i18n.t('err_wrong_password', lang))
 
 @dp.message(F.reply_to_message)
 async def admin_reply_handler(message: types.Message):
     try:
         cfg = database.get_bot_config()
         aid = str(cfg.get("admin_chat_id", "0"))
-        if str(message.chat.id) != aid: return 
+        if str(message.chat.id) != aid: return
+
+        lang = _lang(message.from_user.id)
 
         orig = message.reply_to_message.caption or message.reply_to_message.text
         if not orig:
-            await message.answer("⚠️ Нет текста для ответа.")
+            await message.answer(i18n.t('err_no_reply_text', lang))
             return
-        
-        match = re.search(r"(?:№|No|Num|Заказ)\s*[:#]?\s*(\d+)", orig, re.IGNORECASE)
+
+        match = re.search(r"(?:№|#|No|Num|Заказ|Order)\s*[:#]?\s*(\d+)", orig, re.IGNORECASE)
         if not match:
-            await message.answer(f"⚠️ Не вижу номер заказа.")
+            await message.answer(i18n.t('err_no_order_number', lang))
             return
-            
+
         oid = int(match.group(1))
         order = database.get_order(oid)
         if not order:
-            await message.answer(f"❌ Заказ №{oid} не найден.")
+            await message.answer(i18n.t('err_order_not_found', lang, order_id=oid))
             return
 
         try:
             if message.text:
-                await bot.send_message(order['user_id'], f"👨‍🔧 <b>Мастер:</b>\n{message.text}", parse_mode="HTML")
+                await bot.send_message(order['user_id'], i18n.t('msg_from_master', lang, text=message.text), parse_mode="HTML")
             else:
                 await message.copy_to(order['user_id'])
             await message.react([types.ReactionTypeEmoji(emoji="👍")])
         except Exception as e:
-            await message.answer(f"❌ Ошибка отправки:\n{e}")
+            await message.answer(i18n.t('err_send_failed', lang, error=e))
     except Exception as e:
-        await message.answer(f"💀 Err: {e}")
+        await message.answer(i18n.t('msg_fatal_error', lang, error=e))
 
-# --- УМНЫЙ ПЕРЕХВАТЧИК ---
+# --- SMART INTERCEPTOR ---
 @dp.message()
 async def user_chat_handler(message: types.Message):
     await check_lost_state(message, None)
 
 async def check_lost_state(message, state):
+    lang = _lang(message.from_user.id)
     filling_id = database.get_active_order_id(message.from_user.id)
-    
+
     if filling_id:
         order = database.get_order(filling_id)
         has_photos = order['photo_file_id'] is not None and len(str(order['photo_file_id'])) > 5
-        
+
         if not has_photos:
-            # Если пришло фото - обрабатываем его
             if message.photo or (message.document and message.document.mime_type.startswith('image/')):
                 if state: await state.set_state(OrderForm.photo)
-                # Передаем управление process_photo, она теперь умеет вешать префиксы
                 await process_photo(message, state or FSMContext(storage=dp.storage, key=types.StorageKey(bot.id, message.chat.id, message.from_user.id)))
                 return
 
             if get_config_bool('is_photo_required'):
-                await message.answer(get_text('err_photo_required'))
+                await message.answer(i18n.t('err_photo_required', lang))
                 return
-            
-            if state: 
+
+            if state:
                 await state.update_data(order_id=filling_id)
                 await state.set_state(OrderForm.photo)
             await process_photo_done(message, state or FSMContext(storage=dp.storage, key=types.StorageKey(bot.id, message.chat.id, message.from_user.id)))
             return
 
         if not order['work_type']:
-            await message.answer("⚠️ Восстанавливаю... Выберите ТИП:", reply_markup=kb_work_type())
+            await message.answer(i18n.t('msg_restoring_type', lang), reply_markup=kb_work_type(lang))
             if state: await state.set_state(OrderForm.work_type)
             return
 
         if not order['dimensions_info']:
-            database.update_order_field(filling_id, 'dimensions_info', safe_text(message))
-            btns = [[InlineKeyboardButton(text=get_text('btn_cond_rotation'), callback_data="cond_rotation")], [InlineKeyboardButton(text=get_text('btn_cond_static'), callback_data="cond_static")], [InlineKeyboardButton(text=get_text('btn_cond_unknown'), callback_data="cond_unknown")]]
-            await message.answer(f"✅ Размеры записал ({safe_text(message)}). Условия?", reply_markup=InlineKeyboardMarkup(inline_keyboard=btns))
+            database.update_order_field(filling_id, 'dimensions_info', safe_text(message, lang))
+            btns = [[InlineKeyboardButton(text=i18n.t('btn_cond_rotation', lang), callback_data="cond_rotation")], [InlineKeyboardButton(text=i18n.t('btn_cond_static', lang), callback_data="cond_static")], [InlineKeyboardButton(text=i18n.t('btn_cond_unknown', lang), callback_data="cond_unknown")]]
+            await message.answer(i18n.t('msg_dimensions_recorded', lang, dimensions=safe_text(message, lang)), reply_markup=InlineKeyboardMarkup(inline_keyboard=btns))
             if state: await state.set_state(OrderForm.conditions)
             return
 
-        await finalize_order(message, filling_id, safe_text(message))
+        await finalize_order(message, filling_id, safe_text(message, lang))
         return
 
     order_id = database.get_user_last_active_order(message.from_user.id)
     if order_id:
         await forward_message_to_admin(message, order_id)
     else:
-        await message.answer(get_text('err_no_active_order'))
+        await message.answer(i18n.t('err_no_active_order', lang))
 
 async def main():
+    i18n.refresh_db_overrides()
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

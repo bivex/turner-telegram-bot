@@ -8,7 +8,9 @@ import {
     UserOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import AuthContext from '../contexts/AuthContext';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const { Header, Content, Sider } = Layout;
 
@@ -17,8 +19,8 @@ const MainLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [collapsed, setCollapsed] = useState(false);
+    const { t } = useTranslation();
 
-    // Во время проверки токена показываем загрузку
     if (loading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -27,14 +29,13 @@ const MainLayout = () => {
         );
     }
 
-    // Если не авторизован - редирект на логин
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;
     }
 
     const handleLogout = () => {
         logout();
-        message.success('Выход выполнен');
+        message.success(t('layout.logout_success'));
         navigate('/login');
     };
 
@@ -42,17 +43,17 @@ const MainLayout = () => {
         {
             key: '/dashboard',
             icon: <DashboardOutlined />,
-            label: 'Дашборд',
+            label: t('layout.dashboard'),
         },
         {
             key: '/orders',
             icon: <ShoppingCartOutlined />,
-            label: 'Заказы',
+            label: t('layout.orders'),
         },
         {
             key: '/bot-config',
             icon: <SettingOutlined />,
-            label: 'Настройки бота',
+            label: t('layout.bot_settings'),
         },
     ];
 
@@ -60,7 +61,7 @@ const MainLayout = () => {
         {
             key: 'logout',
             icon: <LogoutOutlined />,
-            label: 'Выйти',
+            label: t('layout.logout'),
             onClick: handleLogout,
         },
     ];
@@ -73,7 +74,7 @@ const MainLayout = () => {
         <Layout style={{ minHeight: '100vh' }}>
             <Sider collapsible collapsed={collapsed} onCollapse={setCollapsed}>
                 <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '10px' }}>
-                    CRM TURNER
+                    {t('app_title')}
                 </div>
                 <Menu
                     theme="dark"
@@ -85,10 +86,13 @@ const MainLayout = () => {
             </Sider>
             <Layout>
                 <Header style={{ padding: '0 24px', background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h2 style={{ margin: 0 }}>Панель управления</h2>
-                    <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-                        <Avatar style={{ cursor: 'pointer' }} icon={<UserOutlined />} />
-                    </Dropdown>
+                    <h2 style={{ margin: 0 }}>{t('layout.panel_title')}</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <LanguageSwitcher />
+                        <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+                            <Avatar style={{ cursor: 'pointer' }} icon={<UserOutlined />} />
+                        </Dropdown>
+                    </div>
                 </Header>
                 <Content style={{ margin: '24px 16px', padding: 24, background: '#fff', borderRadius: 8, minHeight: 280, overflow: 'initial' }}>
                     <Outlet />

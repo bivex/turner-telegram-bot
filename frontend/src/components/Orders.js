@@ -7,6 +7,7 @@ import {
   EyeOutlined, EditOutlined, ShoppingCartOutlined,
   UserOutlined, SyncOutlined
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import AuthContext from '../contexts/AuthContext';
@@ -16,6 +17,7 @@ const { TextArea } = Input;
 
 const Orders = () => {
   const { loading: authLoading } = useContext(AuthContext);
+  const { t } = useTranslation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
@@ -52,7 +54,7 @@ const Orders = () => {
       setOrders(response.data);
       setPagination(prev => ({ ...prev, total: response.data.length * 5 }));
     } catch (error) {
-      message.error('Ошибка загрузки заказов');
+      message.error(t('orders.err_load'));
       console.error(error);
     }
     setLoading(false);
@@ -70,11 +72,11 @@ const Orders = () => {
   const handleStatusChange = async (orderId, newStatus) => {
     try {
       await axios.put(`/api/orders/${orderId}`, { status: newStatus });
-      message.success('Статус обновлен');
+      message.success(t('orders.msg_status_updated'));
       fetchOrders();
       fetchStats();
     } catch (error) {
-      message.error('Ошибка обновления статуса');
+      message.error(t('orders.err_status'));
     }
   };
 
@@ -98,24 +100,24 @@ const Orders = () => {
   const handleEditSubmit = async (values) => {
     try {
       await axios.put(`/api/orders/${selectedOrder.id}`, values);
-      message.success('Заказ обновлен');
+      message.success(t('orders.msg_order_updated'));
       setEditModalVisible(false);
       fetchOrders();
     } catch (error) {
-      message.error('Ошибка обновления заказа');
+      message.error(t('orders.err_update'));
     }
   };
 
   const columns = [
     {
-      title: 'ID',
+      title: t('orders.col_id'),
       dataIndex: 'id',
       key: 'id',
       width: 80,
       sorter: (a, b) => a.id - b.id,
     },
     {
-      title: 'Клиент',
+      title: t('orders.col_client'),
       dataIndex: 'full_name',
       key: 'full_name',
       render: (text, record) => (
@@ -129,26 +131,26 @@ const Orders = () => {
       ),
     },
     {
-      title: 'Тип работы',
+      title: t('orders.col_work_type'),
       dataIndex: 'work_type',
       key: 'work_type',
       render: (text) => text || '-',
     },
     {
-      title: 'Срочность',
+      title: t('orders.col_urgency'),
       dataIndex: 'urgency',
       key: 'urgency',
       render: (text) => {
         const urgencyColors = {
-          '🔥 СРОЧНО (Цена x2)': 'red',
-          '🗓 Стандарт (2-3 дня)': 'orange',
-          '🐢 Не к спеху': 'green'
+          'red': 'red',
+          'orange': 'orange',
+          'green': 'green'
         };
         return <Tag color={urgencyColors[text] || 'default'}>{text || '-'}</Tag>;
       },
     },
     {
-      title: 'Статус',
+      title: t('orders.col_status'),
       dataIndex: 'status',
       key: 'status',
       render: (status, record) => (
@@ -157,34 +159,34 @@ const Orders = () => {
           style={{ width: 140 }}
           onChange={(value) => handleStatusChange(record.id, value)}
         >
-          <Option value="new">🔥 НОВЫЙ</Option>
-          <Option value="discussion">💬 Обсуждение</Option>
-          <Option value="approved">🛠 В работе</Option>
-          <Option value="work">⚙️ Выполняется</Option>
-          <Option value="done">✅ ГОТОВ</Option>
-          <Option value="rejected">❌ Отказ</Option>
+          <Option value="new">{t('orders.status_new')}</Option>
+          <Option value="discussion">{t('orders.status_discussion')}</Option>
+          <Option value="approved">{t('orders.status_approved')}</Option>
+          <Option value="work">{t('orders.status_work')}</Option>
+          <Option value="done">{t('orders.status_done')}</Option>
+          <Option value="rejected">{t('orders.status_rejected')}</Option>
         </Select>
       ),
     },
     {
-      title: 'Дата',
+      title: t('orders.col_date'),
       dataIndex: 'created_at',
       key: 'created_at',
       render: (date) => dayjs(date).format('DD.MM.YYYY HH:mm'),
       sorter: (a, b) => dayjs(a.created_at).unix() - dayjs(b.created_at).unix(),
     },
     {
-      title: 'Действия',
+      title: t('orders.col_actions'),
       key: 'actions',
       render: (_, record) => (
         <Space>
-          <Tooltip title="Просмотр">
+          <Tooltip title={t('orders.btn_view')}>
             <Button
               icon={<EyeOutlined />}
               onClick={() => showOrderDetails(record)}
             />
           </Tooltip>
-          <Tooltip title="Редактировать">
+          <Tooltip title={t('orders.btn_edit')}>
             <Button
               icon={<EditOutlined />}
               onClick={() => showEditModal(record)}
@@ -197,13 +199,13 @@ const Orders = () => {
 
   return (
     <div className="orders-content">
-      <h1>📦 Управление заказами</h1>
+      <h1>{t('orders.title')}</h1>
 
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={8}>
           <Card>
             <Statistic
-              title="Всего заказов"
+              title={t('dashboard.total_orders')}
               value={stats.total_orders}
               prefix={<ShoppingCartOutlined />}
             />
@@ -212,7 +214,7 @@ const Orders = () => {
         <Col span={8}>
           <Card>
             <Statistic
-              title="Новых заказов"
+              title={t('dashboard.new_orders')}
               value={stats.new_orders}
               prefix={<Badge dot status="success"><ShoppingCartOutlined /></Badge>}
               valueStyle={{ color: '#52c41a' }}
@@ -222,7 +224,7 @@ const Orders = () => {
         <Col span={8}>
           <Card>
             <Statistic
-              title="Активных заказов"
+              title={t('dashboard.active_orders')}
               value={stats.active_orders}
               prefix={<SyncOutlined spin />}
               valueStyle={{ color: '#1890ff' }}
@@ -233,22 +235,22 @@ const Orders = () => {
 
       <Card style={{ marginBottom: 16 }}>
         <Space>
-          <span>Фильтр по статусу:</span>
+          <span>{t('orders.filter_label')}</span>
           <Select
             allowClear
-            placeholder="Все статусы"
+            placeholder={t('orders.all_statuses')}
             style={{ width: 200 }}
             value={statusFilter}
             onChange={setStatusFilter}
           >
-            <Option value="new">🔥 Новые</Option>
-            <Option value="discussion">💬 Обсуждение</Option>
-            <Option value="approved">🛠 В работе</Option>
-            <Option value="work">⚙️ Выполняется</Option>
-            <Option value="done">✅ Готовые</Option>
-            <Option value="rejected">❌ Отказы</Option>
+            <Option value="new">{t('orders.filter_new')}</Option>
+            <Option value="discussion">{t('orders.filter_discussion')}</Option>
+            <Option value="approved">{t('orders.filter_approved')}</Option>
+            <Option value="work">{t('orders.filter_work')}</Option>
+            <Option value="done">{t('orders.filter_done')}</Option>
+            <Option value="rejected">{t('orders.filter_rejected')}</Option>
           </Select>
-          <Button onClick={fetchOrders}>Обновить</Button>
+          <Button onClick={fetchOrders}>{t('orders.refresh')}</Button>
         </Space>
       </Card>
 
@@ -261,13 +263,13 @@ const Orders = () => {
           ...pagination,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} из ${total} заказов`,
+          showTotal: (total, range) => t('orders.pagination', { from: range[0], to: range[1], total }),
         }}
         onChange={(pagination) => setPagination(pagination)}
       />
 
       <Modal
-        title={`Заказ №${selectedOrder?.id}`}
+        title={selectedOrder ? t('orders.order_number', { id: selectedOrder.id }) : ''}
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         footer={null}
@@ -277,34 +279,34 @@ const Orders = () => {
           <div>
             <Row gutter={16}>
               <Col span={12}>
-                <h3>👤 Информация о клиенте</h3>
-                <p><strong>Имя:</strong> {selectedOrder.full_name}</p>
+                <h3>{t('orders.client_info')}</h3>
+                <p><strong>{t('orders.name_label')}</strong> {selectedOrder.full_name}</p>
                 <p><strong>Username:</strong> @{selectedOrder.username}</p>
                 <p><strong>Telegram ID:</strong> {selectedOrder.user_id}</p>
               </Col>
               <Col span={12}>
-                <h3>📋 Детали заказа</h3>
-                <p><strong>Тип работы:</strong> {selectedOrder.work_type}</p>
-                <p><strong>Размеры:</strong> {selectedOrder.dimensions_info}</p>
-                <p><strong>Условия:</strong> {selectedOrder.conditions}</p>
-                <p><strong>Срочность:</strong> {selectedOrder.urgency}</p>
+                <h3>{t('orders.order_details')}</h3>
+                <p><strong>{t('orders.work_type')}</strong> {selectedOrder.work_type}</p>
+                <p><strong>{t('orders.dimensions')}</strong> {selectedOrder.dimensions_info}</p>
+                <p><strong>{t('orders.conditions')}</strong> {selectedOrder.conditions}</p>
+                <p><strong>{t('orders.urgency')}</strong> {selectedOrder.urgency}</p>
               </Col>
             </Row>
 
             <div style={{ marginTop: 16 }}>
-              <h3>💬 Комментарий</h3>
-              <p>{selectedOrder.comment || 'Нет комментария'}</p>
+              <h3>{t('orders.comment')}</h3>
+              <p>{selectedOrder.comment || t('orders.no_comment')}</p>
             </div>
 
             {photos.length > 0 && (
               <div style={{ marginTop: 16 }}>
-                <h3>📸 Фото</h3>
+                <h3>{t('orders.photos')}</h3>
                 <div className="photo-gallery">
                   {photos.map((photoId, index) => (
                     <Image
                       key={index}
-                      src={photoId} // Теперь тут полная ссылка
-                      alt={`Фото ${index + 1}`}
+                      src={photoId}
+                      alt={t('orders.photo_alt', { index: index + 1 })}
                       className="photo-item"
                     />
                   ))}
@@ -316,7 +318,7 @@ const Orders = () => {
       </Modal>
 
       <Modal
-        title={`Редактирование заказа №${selectedOrder?.id}`}
+        title={selectedOrder ? t('orders.edit_title', { id: selectedOrder.id }) : ''}
         open={editModalVisible}
         onCancel={() => setEditModalVisible(false)}
         footer={null}
@@ -332,33 +334,33 @@ const Orders = () => {
           >
             <Form.Item
               name="status"
-              label="Статус"
+              label={t('orders.status_label')}
               rules={[{ required: true }]}
             >
               <Select>
-                <Option value="new">🔥 НОВЫЙ</Option>
-                <Option value="discussion">💬 Обсуждение</Option>
-                <Option value="approved">🛠 В работе</Option>
-                <Option value="work">⚙️ Выполняется</Option>
-                <Option value="done">✅ ГОТОВ</Option>
-                <Option value="rejected">❌ Отказы</Option>
+                <Option value="new">{t('orders.edit_status_new')}</Option>
+                <Option value="discussion">{t('orders.edit_status_discussion')}</Option>
+                <Option value="approved">{t('orders.edit_status_approved')}</Option>
+                <Option value="work">{t('orders.edit_status_work')}</Option>
+                <Option value="done">{t('orders.edit_status_done')}</Option>
+                <Option value="rejected">{t('orders.edit_status_rejected')}</Option>
               </Select>
             </Form.Item>
 
             <Form.Item
               name="internal_note"
-              label="Внутренняя заметка"
+              label={t('orders.internal_note')}
             >
-              <TextArea rows={4} placeholder="Внутренняя заметка для администратора" />
+              <TextArea rows={4} placeholder={t('orders.note_placeholder')} />
             </Form.Item>
 
             <Form.Item style={{ textAlign: 'right' }}>
               <Space>
                 <Button onClick={() => setEditModalVisible(false)}>
-                  Отмена
+                  {t('cancel')}
                 </Button>
                 <Button type="primary" htmlType="submit">
-                  Сохранить
+                  {t('save')}
                 </Button>
               </Space>
             </Form.Item>

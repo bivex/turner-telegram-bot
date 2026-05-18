@@ -2,21 +2,33 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import ruRU from 'antd/locale/ru_RU';
+import enUS from 'antd/locale/en_US';
+import ukUA from 'antd/locale/uk_UA';
+import { useTranslation } from 'react-i18next';
+import dayjs from 'dayjs';
+import 'dayjs/locale/ru';
+import 'dayjs/locale/en';
+import 'dayjs/locale/uk';
 import './App.css';
 
-// Компоненты
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import Orders from './components/Orders';
 import BotConfig from './components/BotConfig';
 import MainLayout from './components/MainLayout';
 
-// Контекст аутентификации
 import { AuthProvider } from './contexts/AuthContext';
 
+const antLocales = { ru: ruRU, en: enUS, uk: ukUA };
+const dayjsLocales = { ru: 'ru', en: 'en', uk: 'uk' };
+
 function App() {
+  const { i18n } = useTranslation();
+  const antLocale = antLocales[i18n.language] || ruRU;
+  dayjs.locale(dayjsLocales[i18n.language] || 'ru');
+
   return (
-    <ConfigProvider locale={ruRU}>
+    <ConfigProvider locale={antLocale}>
       <AuthProvider>
         <Router>
           <div className="App">

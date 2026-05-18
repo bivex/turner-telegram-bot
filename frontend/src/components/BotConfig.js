@@ -4,6 +4,7 @@ import {
   Divider, InputNumber, Alert
 } from 'antd';
 import { SaveOutlined, ReloadOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 
 const { TextArea } = Input;
@@ -12,9 +13,11 @@ const BotConfig = () => {
   const [loading, setLoading] = useState(false);
   const [textsForm] = Form.useForm();
   const [settingsForm] = Form.useForm();
+  const { t } = useTranslation();
+
+  const requiredRule = [{ required: true, message: t('required_field') }];
 
   const loadConfig = React.useCallback(async () => {
-    console.log('BotConfig: Loading config...');
     setLoading(true);
     try {
       const [textsResponse, settingsResponse] = await Promise.all([
@@ -22,15 +25,11 @@ const BotConfig = () => {
         axios.get('/api/bot-config/settings')
       ]);
 
-      console.log('BotConfig: Loaded texts:', textsResponse.data);
-      console.log('BotConfig: Loaded settings:', settingsResponse.data);
-
       if (textsResponse.data) {
         textsForm.setFieldsValue(textsResponse.data);
       }
 
       if (settingsResponse.data) {
-        // Конвертируем "1"/"0" в true/false для Switch
         const normalizedSettings = { ...settingsResponse.data };
         ['is_photo_required', 'step_extra_enabled'].forEach(key => {
           if (normalizedSettings[key] !== undefined) {
@@ -40,11 +39,10 @@ const BotConfig = () => {
         settingsForm.setFieldsValue(normalizedSettings);
       }
     } catch (error) {
-      console.error('BotConfig: Load error:', error);
-      message.error('Ошибка загрузки настроек');
+      message.error(t('bot_config.err_load'));
     }
     setLoading(false);
-  }, [textsForm, settingsForm]);
+  }, [textsForm, settingsForm, t]);
 
   useEffect(() => {
     loadConfig();
@@ -54,9 +52,9 @@ const BotConfig = () => {
     setLoading(true);
     try {
       await axios.put('/api/bot-config/texts', values);
-      message.success('Тексты сохранены успешно');
+      message.success(t('bot_config.msg_texts_saved'));
     } catch (error) {
-      message.error('Ошибка сохранения текстов');
+      message.error(t('bot_config.err_save_texts'));
     } finally {
       setLoading(false);
     }
@@ -66,9 +64,9 @@ const BotConfig = () => {
     setLoading(true);
     try {
       await axios.put('/api/bot-config/settings', values);
-      message.success('Настройки сохранены успешно');
+      message.success(t('bot_config.msg_settings_saved'));
     } catch (error) {
-      message.error('Ошибка сохранения настроек');
+      message.error(t('bot_config.err_save_settings'));
     } finally {
       setLoading(false);
     }
@@ -77,234 +75,105 @@ const BotConfig = () => {
   const tabItems = [
     {
       key: 'texts',
-      label: '📝 Тексты бота',
+      label: t('bot_config.tab_texts'),
       children: (
-        <Card title="Конструктор текстов">
-          <Form
-            form={textsForm}
-            layout="vertical"
-            onFinish={saveTexts}
-          >
-            <Form.Item
-              label="Приветственное сообщение"
-              name="welcome_msg"
-              rules={[{ required: true, message: 'Обязательное поле' }]}
-            >
-              <TextArea
-                rows={3}
-                placeholder="Привет! Я принимаю заказы на токарные работы..."
-              />
+        <Card title={t('bot_config.card_text_constructor')}>
+          <Form form={textsForm} layout="vertical" onFinish={saveTexts}>
+            <Form.Item label={t('bot_config.welcome_msg_label')} name="welcome_msg" rules={requiredRule}>
+              <TextArea rows={3} />
             </Form.Item>
 
-            <Divider>Шаг 1: Фото</Divider>
+            <Divider>{t('bot_config.divider_step1')}</Divider>
 
-            <Form.Item
-              label="Текст вопроса про фото"
-              name="step_photo_text"
-              rules={[{ required: true, message: 'Обязательное поле' }]}
-            >
-              <TextArea
-                rows={2}
-                placeholder="📷 Шаг 1. Загрузите фото детали..."
-              />
+            <Form.Item label={t('bot_config.step_photo_text_label')} name="step_photo_text" rules={requiredRule}>
+              <TextArea rows={2} />
+            </Form.Item>
+            <Form.Item label={t('bot_config.btn_skip_photo_label')} name="btn_skip_photo" rules={requiredRule}>
+              <Input />
             </Form.Item>
 
-            <Form.Item
-              label="Кнопка 'Пропустить фото'"
-              name="btn_skip_photo"
-              rules={[{ required: true, message: 'Обязательное поле' }]}
-            >
-              <Input placeholder="Нет фото / Пропустить" />
+            <Divider>{t('bot_config.divider_step2')}</Divider>
+
+            <Form.Item label={t('bot_config.step_type_text_label')} name="step_type_text" rules={requiredRule}>
+              <TextArea rows={2} />
             </Form.Item>
-
-            <Divider>Шаг 2: Тип работы</Divider>
-
-            <Form.Item
-              label="Текст вопроса про тип работы"
-              name="step_type_text"
-              rules={[{ required: true, message: 'Обязательное поле' }]}
-            >
-              <TextArea
-                rows={2}
-                placeholder="🛠 Шаг 2. Что нужно сделать?"
-              />
-            </Form.Item>
-
             <Space direction="vertical" style={{ width: '100%' }}>
-              <Form.Item
-                label="Кнопка 'Восстановление детали'"
-                name="btn_type_repair"
-                rules={[{ required: true, message: 'Обязательное поле' }]}
-              >
-                <Input placeholder="🛠 Восстановление детали" />
+              <Form.Item label={t('bot_config.btn_type_repair_label')} name="btn_type_repair" rules={requiredRule}>
+                <Input />
               </Form.Item>
-
-              <Form.Item
-                label="Кнопка 'Копия по образцу'"
-                name="btn_type_copy"
-                rules={[{ required: true, message: 'Обязательное поле' }]}
-              >
-                <Input placeholder="⚙️ Копия по образцу" />
+              <Form.Item label={t('bot_config.btn_type_copy_label')} name="btn_type_copy" rules={requiredRule}>
+                <Input />
               </Form.Item>
-
-              <Form.Item
-                label="Кнопка 'Деталь по чертежу'"
-                name="btn_type_drawing"
-                rules={[{ required: true, message: 'Обязательное поле' }]}
-              >
-                <Input placeholder="📐 Деталь по чертежу" />
+              <Form.Item label={t('bot_config.btn_type_drawing_label')} name="btn_type_drawing" rules={requiredRule}>
+                <Input />
               </Form.Item>
             </Space>
 
-            <Divider>Шаг 3: Размеры</Divider>
+            <Divider>{t('bot_config.divider_step3')}</Divider>
 
-            <Form.Item
-              label="Текст вопроса про размеры"
-              name="step_dim_text"
-              rules={[{ required: true, message: 'Обязательное поле' }]}
-            >
-              <TextArea
-                rows={3}
-                placeholder="📏 Шаг 3. Размеры..."
-              />
+            <Form.Item label={t('bot_config.step_dim_text_label')} name="step_dim_text" rules={requiredRule}>
+              <TextArea rows={3} />
             </Form.Item>
 
-            <Divider>Шаг 4: Условия работы</Divider>
+            <Divider>{t('bot_config.divider_step4')}</Divider>
 
-            <Form.Item
-              label="Текст вопроса про условия"
-              name="step_cond_text"
-              rules={[{ required: true, message: 'Обязательное поле' }]}
-            >
-              <TextArea
-                rows={2}
-                placeholder="⚙️ Шаг 4. Специфика детали..."
-              />
+            <Form.Item label={t('bot_config.step_cond_text_label')} name="step_cond_text" rules={requiredRule}>
+              <TextArea rows={2} />
             </Form.Item>
-
             <Space direction="vertical" style={{ width: '100%' }}>
-              <Form.Item
-                label="Кнопка 'Вращение'"
-                name="btn_cond_rotation"
-                rules={[{ required: true, message: 'Обязательное поле' }]}
-              >
-                <Input placeholder="💫 Вращение" />
+              <Form.Item label={t('bot_config.btn_cond_rotation_label')} name="btn_cond_rotation" rules={requiredRule}>
+                <Input />
               </Form.Item>
-
-              <Form.Item
-                label="Кнопка 'Неподвижно'"
-                name="btn_cond_static"
-                rules={[{ required: true, message: 'Обязательное поле' }]}
-              >
-                <Input placeholder="🧱 Неподвижно" />
+              <Form.Item label={t('bot_config.btn_cond_static_label')} name="btn_cond_static" rules={requiredRule}>
+                <Input />
               </Form.Item>
-
-              <Form.Item
-                label="Кнопка 'Ударная нагрузка'"
-                name="btn_cond_impact"
-                rules={[{ required: true, message: 'Обязательное поле' }]}
-              >
-                <Input placeholder="🔨 Ударная нагрузка" />
+              <Form.Item label={t('bot_config.btn_cond_impact_label')} name="btn_cond_impact" rules={requiredRule}>
+                <Input />
               </Form.Item>
-
-              <Form.Item
-                label="Кнопка 'Не знаю'"
-                name="btn_cond_unknown"
-                rules={[{ required: true, message: 'Обязательное поле' }]}
-              >
-                <Input placeholder="🤷‍♂️ Не знаю" />
+              <Form.Item label={t('bot_config.btn_cond_unknown_label')} name="btn_cond_unknown" rules={requiredRule}>
+                <Input />
               </Form.Item>
             </Space>
 
-            <Divider>Шаг 5: Срочность</Divider>
+            <Divider>{t('bot_config.divider_step5')}</Divider>
 
-            <Form.Item
-              label="Текст вопроса про срочность"
-              name="step_urgency_text"
-              rules={[{ required: true, message: 'Обязательное поле' }]}
-            >
-              <TextArea
-                rows={2}
-                placeholder="⏳ Шаг 5. Срочность"
-              />
+            <Form.Item label={t('bot_config.step_urgency_text_label')} name="step_urgency_text" rules={requiredRule}>
+              <TextArea rows={2} />
             </Form.Item>
-
             <Space direction="vertical" style={{ width: '100%' }}>
-              <Form.Item
-                label="Кнопка 'СРОЧНО'"
-                name="btn_urgency_high"
-                rules={[{ required: true, message: 'Обязательное поле' }]}
-              >
-                <Input placeholder="🔥 СРОЧНО (Цена x2)" />
+              <Form.Item label={t('bot_config.btn_urgency_high_label')} name="btn_urgency_high" rules={requiredRule}>
+                <Input />
               </Form.Item>
-
-              <Form.Item
-                label="Кнопка 'Стандарт'"
-                name="btn_urgency_med"
-                rules={[{ required: true, message: 'Обязательное поле' }]}
-              >
-                <Input placeholder="🗓 Стандарт (2-3 дня)" />
+              <Form.Item label={t('bot_config.btn_urgency_med_label')} name="btn_urgency_med" rules={requiredRule}>
+                <Input />
               </Form.Item>
-
-              <Form.Item
-                label="Кнопка 'Не к спеху'"
-                name="btn_urgency_low"
-                rules={[{ required: true, message: 'Обязательное поле' }]}
-              >
-                <Input placeholder="🐢 Не к спеху" />
+              <Form.Item label={t('bot_config.btn_urgency_low_label')} name="btn_urgency_low" rules={requiredRule}>
+                <Input />
               </Form.Item>
             </Space>
 
-            <Divider>Финальные сообщения</Divider>
+            <Divider>{t('bot_config.divider_final')}</Divider>
 
-            <Form.Item
-              label="Текст финального вопроса"
-              name="step_final_text"
-              rules={[{ required: true, message: 'Обязательное поле' }]}
-            >
-              <TextArea
-                rows={2}
-                placeholder="✍️ Финал. Напишите комментарий..."
-              />
+            <Form.Item label={t('bot_config.step_final_text_label')} name="step_final_text" rules={requiredRule}>
+              <TextArea rows={2} />
             </Form.Item>
-
-            <Form.Item
-              label="Сообщение об успехе"
-              name="msg_done"
-              rules={[{ required: true, message: 'Обязательное поле' }]}
-            >
-              <TextArea
-                rows={2}
-                placeholder="✅ Заказ принят!..."
-              />
+            <Form.Item label={t('bot_config.msg_done_label')} name="msg_done" rules={requiredRule}>
+              <TextArea rows={2} />
             </Form.Item>
-
-            <Form.Item
-              label="Ошибка: нет фото"
-              name="err_photo_required"
-              rules={[{ required: true, message: 'Обязательное поле' }]}
-            >
-              <TextArea
-                rows={2}
-                placeholder="⚠️ Я не могу принять заказ без фото..."
-              />
+            <Form.Item label={t('bot_config.err_photo_required_label')} name="err_photo_required" rules={requiredRule}>
+              <TextArea rows={2} />
             </Form.Item>
-
-            <Form.Item
-              label="Сообщение об отмене"
-              name="msg_order_canceled"
-              rules={[{ required: true, message: 'Обязательное поле' }]}
-            >
-              <Input placeholder="Заказ отменен" />
+            <Form.Item label={t('bot_config.msg_order_canceled_label')} name="msg_order_canceled" rules={requiredRule}>
+              <Input />
             </Form.Item>
 
             <Form.Item style={{ textAlign: 'right' }}>
               <Space>
                 <Button icon={<ReloadOutlined />} onClick={loadConfig}>
-                  Сбросить
+                  {t('reset')}
                 </Button>
                 <Button type="primary" icon={<SaveOutlined />} htmlType="submit" loading={loading}>
-                  Сохранить тексты
+                  {t('bot_config.save_texts')}
                 </Button>
               </Space>
             </Form.Item>
@@ -314,49 +183,42 @@ const BotConfig = () => {
     },
     {
       key: 'settings',
-      label: '🔧 Системные настройки',
+      label: t('bot_config.tab_settings'),
       forceRender: true,
       children: (
-        <Card title="Настройки поведения бота">
-          <Form
-            form={settingsForm}
-            layout="vertical"
-            onFinish={saveSettings}
-          >
+        <Card title={t('bot_config.card_behavior_settings')}>
+          <Form form={settingsForm} layout="vertical" onFinish={saveSettings}>
             <Form.Item
-              label="Фото обязательно"
+              label={t('bot_config.photo_required_label')}
               name="is_photo_required"
               valuePropName="checked"
-              tooltip="Если включено, клиент не сможет пропустить шаг с фото"
+              tooltip={t('bot_config.photo_required_tooltip')}
             >
-              <Switch checkedChildren="Да" unCheckedChildren="Нет" />
+              <Switch checkedChildren={t('yes')} unCheckedChildren={t('no')} />
             </Form.Item>
 
             <Form.Item
-              label="Дополнительный вопрос включен"
+              label={t('bot_config.extra_question_label')}
               name="step_extra_enabled"
               valuePropName="checked"
-              tooltip="Добавляет еще один шаг опроса после срочности"
+              tooltip={t('bot_config.extra_question_tooltip')}
             >
-              <Switch checkedChildren="Да" unCheckedChildren="Нет" />
+              <Switch checkedChildren={t('yes')} unCheckedChildren={t('no')} />
             </Form.Item>
 
             <Divider />
 
             <Form.Item
-              label="ID чата администратора"
+              label={t('bot_config.admin_chat_id_label')}
               name="admin_chat_id"
-              tooltip="Telegram ID администратора для получения уведомлений"
+              tooltip={t('bot_config.admin_chat_id_tooltip')}
             >
-              <InputNumber
-                style={{ width: '100%' }}
-                placeholder="123456789"
-              />
+              <InputNumber style={{ width: '100%' }} placeholder="123456789" />
             </Form.Item>
 
             <Alert
-              message="Важно"
-              description="ID чата администратора можно получить командой /iamadmin в боте после настройки BOT_ADMIN_PASSWORD"
+              message={t('bot_config.info_title')}
+              description={t('bot_config.info_description')}
               type="info"
               showIcon
               style={{ marginBottom: 16 }}
@@ -365,10 +227,10 @@ const BotConfig = () => {
             <Form.Item style={{ textAlign: 'right' }}>
               <Space>
                 <Button icon={<ReloadOutlined />} onClick={loadConfig}>
-                  Сбросить
+                  {t('reset')}
                 </Button>
                 <Button type="primary" icon={<SaveOutlined />} htmlType="submit" loading={loading}>
-                  Сохранить настройки
+                  {t('bot_config.save_settings')}
                 </Button>
               </Space>
             </Form.Item>
@@ -380,11 +242,11 @@ const BotConfig = () => {
 
   return (
     <div className="bot-config-content">
-      <h1>⚙️ Настройки бота</h1>
+      <h1>{t('bot_config.title')}</h1>
 
       <Alert
-        message="Внимание"
-        description="Изменения вступят в силу после перезапуска бота. Используйте docker compose restart bot"
+        message={t('bot_config.warning_title')}
+        description={t('bot_config.warning_description')}
         type="warning"
         showIcon
         style={{ marginBottom: 24 }}
