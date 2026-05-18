@@ -54,8 +54,6 @@ services:
       - BOT_TOKEN=${BOT_TOKEN}
     volumes:
       - ./backend:/app
-      - ./database.py:/app/database.py
-      - ./config.py:/app/config.py
     networks:
       - turner-network
 
