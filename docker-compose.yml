@@ -53,6 +53,7 @@ services:
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this}
       - BOT_TOKEN=${BOT_TOKEN}
     volumes:
+      - ./backend:/app
       - ./database.py:/app/database.py
       - ./config.py:/app/config.py
     networks:
@@ -71,6 +72,11 @@ services:
     environment:
       - REACT_APP_BOT_TOKEN=${BOT_TOKEN}
       - WDS_SOCKET_PORT=0
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
     networks:
       - turner-network
 
