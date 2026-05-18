@@ -83,6 +83,13 @@ def kb_work_type(lang):
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
+def kb_start_menu(lang):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=i18n.t('btn_new_order', lang), callback_data="start_new_order")],
+        [InlineKeyboardButton(text=i18n.t('btn_cancel_order', lang), callback_data="start_cancel"),
+         InlineKeyboardButton(text=i18n.t('btn_lang', lang), callback_data="start_lang")],
+    ])
+
 def kb_urgency(lang):
     buttons = [
         [InlineKeyboardButton(text=i18n.t('btn_urgency_high', lang), callback_data="urgency_high")],
@@ -98,21 +105,46 @@ async def cmd_start(message: types.Message, state: FSMContext):
     await state.clear()
     lang = _lang(message.from_user.id)
     user_id = message.from_user.id
+    welcome = i18n.t('welcome_msg', lang)
+    await message.answer(welcome, reply_markup=kb_start_menu(lang), parse_mode="HTML")
+
+@dp.callback_query(F.data == "start_new_order")
+async def cb_new_order(callback: types.CallbackQuery, state: FSMContext):
+    await state.clear()
+    lang = _lang(callback.from_user.id)
+    user_id = callback.from_user.id
 
     database.cancel_old_filling_orders(user_id)
 
-    username = message.from_user.username or "NoNick"
-    full_name = message.from_user.full_name
+    username = callback.from_user.username or "NoNick"
+    full_name = callback.from_user.full_name
     order_id = database.create_order(user_id, username, full_name)
 
     await state.update_data(order_id=order_id, photo_ids=[])
 
-    welcome = i18n.t('welcome_msg', lang)
     label = i18n.t('new_order_label', lang, order_id=order_id)
-    await message.answer(f"{welcome}\n\n{label}", parse_mode="HTML")
-
-    await message.answer(i18n.t('step_photo_text', lang), reply_markup=kb_photo_step(lang), parse_mode="Markdown")
+    await callback.message.edit_text(f"{label}\n\n{i18n.t('step_photo_text', lang)}", reply_markup=None, parse_mode="Markdown")
+    await callback.message.answer(i18n.t('step_photo_text', lang), reply_markup=kb_photo_step(lang), parse_mode="Markdown")
     await state.set_state(OrderForm.photo)
+    await callback.answer()
+
+@dp.callback_query(F.data == "start_cancel")
+async def cb_cancel(callback: types.CallbackQuery, state: FSMContext):
+    await state.clear()
+    lang = _lang(callback.from_user.id)
+    database.cancel_old_filling_orders(callback.from_user.id)
+    await callback.message.edit_text(i18n.t('msg_order_canceled', lang))
+    await callback.answer()
+
+@dp.callback_query(F.data == "start_lang")
+async def cb_lang(callback: types.CallbackQuery):
+    lang = _lang(callback.from_user.id)
+    buttons = []
+    for code, label in i18n.SUPPORTED_LANGUAGES.items():
+        prefix = '✅ ' if code == lang else ''
+        buttons.append([InlineKeyboardButton(text=f"{prefix}{label}", callback_data=f"lang_{code}")])
+    await callback.message.edit_text(i18n.t('lang_select_prompt', lang), reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await callback.answer()
 
 @dp.message(Command("cancel"))
 async def cmd_cancel(message: types.Message, state: FSMContext):
