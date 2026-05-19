@@ -64,6 +64,7 @@
   "msg_price_accepted_admin": "✅ Клиент принял цену по заказу #{order_id}.",
   "msg_price_rejected_admin": "❌ Клиент отказался от цены по заказу #{order_id}.",
   "msg_deadline_reminder": "⏰ Напоминание: заказ #{order_id} будет готов к {deadline}!",
+  "msg_sent_to_admin": "✅ Сообщение отправлено мастеру. Ожидайте ответа.",
   "msg_broadcast_sent": "📤 Рассылка отправлена: {count} доставлено, {failed} не доставлено.",
   "msg_broadcast_prompt": "Отправьте текст сообщения для рассылки всем клиентам:",
   "msg_no_templates": "📋 Нет сохранённых шаблонов.",

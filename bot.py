@@ -108,15 +108,16 @@ def safe_text(message: types.Message, lang: str = 'ru'):
     return i18n.t('safe_unknown', lang)
 
 async def forward_message_to_admin(message: types.Message, order_id):
+    lang = _lang(message.from_user.id)
     try:
         admins = database.get_all_admins()
         if not admins:
-            lang = _lang(message.from_user.id)
             await message.answer(i18n.t('err_admin_not_set', lang))
             return
 
         al = _admin_lang()
         header = i18n.t('msg_client_msg_header', al, order_id=order_id)
+        sent_to_at_least_one = False
         for admin_id in admins:
             try:
                 if message.text:
@@ -128,19 +129,28 @@ async def forward_message_to_admin(message: types.Message, order_id):
                         i18n.t('msg_refers_to_order', al, order_id=order_id),
                         parse_mode="HTML"
                     )
+                sent_to_at_least_one = True
             except Exception as e:
                 logging.error(f"Deliver error to {admin_id}: {e}")
+        
+        if sent_to_at_least_one:
+            await message.answer(i18n.t('msg_sent_to_admin', lang))
     except Exception as e:
         logging.error(f"Deliver error: {e}")
+        await message.answer(i18n.t('msg_fatal_error', lang, error=e))
 
 # --- KEYBOARDS ---
-def kb_photo_step(lang):
-    buttons = [[KeyboardButton(text=i18n.t('btn_photos_done', lang))]]
-    if not get_config_bool('is_photo_required'):
-        buttons.append([KeyboardButton(text=i18n.t('btn_skip_photo', lang))])
-    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True, one_time_keyboard=True)
+def kb_main_menu(lang):
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=i18n.t('btn_new_order', lang))],
+            [KeyboardButton(text=i18n.t('btn_my_orders', lang)), 
+             KeyboardButton(text=i18n.t('btn_lang', lang))]
+        ],
+        resize_keyboard=True
+    )
 
-def kb_work_type(lang):
+def kb_photo_step_dynamic(lang, step):
     buttons = [
         [InlineKeyboardButton(text=i18n.t('btn_type_repair', lang), callback_data="type_repair")],
         [InlineKeyboardButton(text=i18n.t('btn_type_copy', lang), callback_data="type_copy")],
@@ -168,32 +178,56 @@ def kb_urgency(lang):
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
+    logging.info(f"Command /start from {message.from_user.id} (@{message.from_user.username})")
     await state.clear()
     lang = _lang(message.from_user.id)
-    user_id = message.from_user.id
     welcome = i18n.t('welcome_msg', lang)
-    await message.answer(welcome, reply_markup=kb_start_menu(lang), parse_mode="HTML")
+    await message.answer(welcome, reply_markup=kb_main_menu(lang), parse_mode="HTML")
+
+async def start_new_order_logic(user_id, username, full_name, lang, message_to_reply, state: FSMContext):
+    await state.clear()
+    database.cancel_old_filling_orders(user_id)
+    order_id = database.create_order(user_id, username, full_name)
+    await state.update_data(order_id=order_id, photo_ids=[], current_step=0)
+    await state.set_state(OrderForm.survey)
+    label = i18n.t('new_order_label', lang, order_id=order_id)
+    
+    # If it's a callback, we might want to edit text, but here we just answer
+    await message_to_reply.answer(label, reply_markup=types.ReplyKeyboardRemove(), parse_mode="HTML")
+    await ask_step(message_to_reply, state, 0)
 
 @dp.callback_query(F.data == "start_new_order")
 async def cb_new_order(callback: types.CallbackQuery, state: FSMContext):
-    await state.clear()
     lang = _lang(callback.from_user.id)
-    user_id = callback.from_user.id
-
-    database.cancel_old_filling_orders(user_id)
-
-    username = callback.from_user.username or "NoNick"
-    full_name = callback.from_user.full_name
-    order_id = database.create_order(user_id, username, full_name)
-
-    await state.update_data(order_id=order_id, photo_ids=[], current_step=0)
-    await state.set_state(OrderForm.survey)
-
-    label = i18n.t('new_order_label', lang, order_id=order_id)
-    await callback.message.edit_text(label, reply_markup=None, parse_mode="Markdown")
-    
-    await ask_step(callback.message, state, 0)
+    await start_new_order_logic(
+        callback.from_user.id, 
+        callback.from_user.username or "NoNick",
+        callback.from_user.full_name,
+        lang,
+        callback.message,
+        state
+    )
     await callback.answer()
+
+@dp.message(F.text.in_([i18n.t('btn_new_order', 'ru'), i18n.t('btn_new_order', 'en'), i18n.t('btn_new_order', 'uk')]))
+async def msg_new_order(message: types.Message, state: FSMContext):
+    lang = _lang(message.from_user.id)
+    await start_new_order_logic(
+        message.from_user.id,
+        message.from_user.username or "NoNick",
+        message.from_user.full_name,
+        lang,
+        message,
+        state
+    )
+
+@dp.message(F.text.in_([i18n.t('btn_my_orders', 'ru'), i18n.t('btn_my_orders', 'en'), i18n.t('btn_my_orders', 'uk')]))
+async def msg_my_orders(message: types.Message):
+    await cmd_my_orders(message)
+
+@dp.message(F.text.in_([i18n.t('btn_lang', 'ru'), i18n.t('btn_lang', 'en'), i18n.t('btn_lang', 'uk')]))
+async def msg_lang(message: types.Message):
+    await cmd_lang(message)
 
 @dp.callback_query(F.data == "start_cancel")
 async def cb_cancel(callback: types.CallbackQuery, state: FSMContext):
@@ -272,6 +306,7 @@ async def process_choice(callback: types.CallbackQuery, state: FSMContext):
 
 @dp.message(OrderForm.survey)
 async def process_survey_message(message: types.Message, state: FSMContext):
+    logging.info(f"Survey message from {message.from_user.id}: {message.text or '[media]'}")
     lang = _lang(message.from_user.id)
     data = await state.get_data()
     flow = await get_survey_flow()
@@ -386,6 +421,7 @@ async def cmd_admin_auth(message: types.Message):
 
 @dp.message(F.reply_to_message)
 async def admin_reply_handler(message: types.Message):
+    logging.info(f"Admin reply from {message.from_user.id}")
     try:
         if not database.is_admin(message.chat.id): return
 
@@ -635,6 +671,14 @@ async def check_deadline_reminders():
 # --- SMART INTERCEPTOR ---
 @dp.message()
 async def user_chat_handler(message: types.Message):
+    logging.info(f"General message from {message.from_user.id}: {message.text or '[media]'}")
+    
+    # Если это админ и он НЕ отвечает на сообщение (нет reply_to_message), 
+    # просто игнорируем или логируем, чтобы не спамить ошибкой "Не вижу номер заказа"
+    if database.is_admin(message.from_user.id) and not message.reply_to_message:
+        logging.info(f"Admin {message.from_user.id} sent a non-reply message. Ignoring.")
+        return
+
     await check_lost_state(message, None)
 
 async def check_lost_state(message, state):
@@ -663,8 +707,18 @@ async def check_lost_state(message, state):
     else:
         await message.answer(i18n.t('err_no_active_order', lang))
 
+async def set_commands(bot: Bot):
+    commands = [
+        types.BotCommand(command="start", description="Главное меню / Головне меню"),
+        types.BotCommand(command="myorders", description="Мои заказы / Мої замовлення"),
+        types.BotCommand(command="lang", description="Сменить язык / Змінити мову"),
+        types.BotCommand(command="cancel", description="Отмена / Скасувати"),
+    ]
+    await bot.set_my_commands(commands)
+
 async def main():
     i18n.refresh_db_overrides()
+    await set_commands(bot)
     scheduler = AsyncIOScheduler()
     scheduler.add_job(check_deadline_reminders, 'cron', hour=9)
     scheduler.start()

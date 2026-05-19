@@ -64,6 +64,7 @@
   "msg_price_accepted_admin": "✅ Client accepted price for order #{order_id}.",
   "msg_price_rejected_admin": "❌ Client rejected price for order #{order_id}.",
   "msg_deadline_reminder": "⏰ Reminder: Order #{order_id} will be ready by {deadline}!",
+  "msg_sent_to_admin": "✅ Message sent to the master. Please wait for a reply.",
   "msg_broadcast_sent": "📤 Broadcast sent: {count} delivered, {failed} failed.",
   "msg_broadcast_prompt": "Send the message text to broadcast to all customers:",
   "msg_no_templates": "📋 No saved templates.",

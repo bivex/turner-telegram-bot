@@ -64,7 +64,9 @@
   "msg_price_accepted_admin": "✅ Клієнт прийняв ціну за замовлення #{order_id}.",
   "msg_price_rejected_admin": "❌ Клієнт відхилив ціну за замовлення #{order_id}.",
   "msg_deadline_reminder": "⏰ Нагадування: замовлення #{order_id} буде готове до {deadline}!",
-  "msg_broadcast_sent": "📤 Розсилку відправлено: {count} доставлено, {failed} не доставлено.",
+  "msg_sent_to_admin": "✅ Повідомлення надіслано майстру. Очікуйте на відповідь.",
+  "msg_broadcast_sent": "📤 Розсилка відправлена: {count} доставлено, {failed} не доставлено.",
+
   "msg_broadcast_prompt": "Надішліть текст повідомлення для розсилки всім клієнтам:",
   "msg_no_templates": "📋 Немає збережених шаблонів.",
   "msg_templates_list": "📋 Шаблони:",
