@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   Card, Form, Input, Button, Switch, message, Tabs, Space,
-  Divider, InputNumber, Alert
+  Divider, InputNumber, Alert, Select, Row, Col
 } from 'antd';
-import { SaveOutlined, ReloadOutlined } from '@ant-design/icons';
+import { SaveOutlined, ReloadOutlined, PlusOutlined, MinusCircleOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 
@@ -11,8 +11,8 @@ const { TextArea } = Input;
 
 const BotConfig = () => {
   const [loading, setLoading] = useState(false);
-  const [textsForm] = Form.useForm();
   const [settingsForm] = Form.useForm();
+  const [flowForm] = Form.useForm();
   const { t } = useTranslation();
 
   const requiredRule = [{ required: true, message: t('required_field') }];
@@ -20,14 +20,10 @@ const BotConfig = () => {
   const loadConfig = React.useCallback(async () => {
     setLoading(true);
     try {
-      const [textsResponse, settingsResponse] = await Promise.all([
-        axios.get('/api/bot-config/texts'),
-        axios.get('/api/bot-config/settings')
+      const [settingsResponse, flowResponse] = await Promise.all([
+        axios.get('/api/bot-config/settings'),
+        axios.get('/api/bot-config/flow')
       ]);
-
-      if (textsResponse.data) {
-        textsForm.setFieldsValue(textsResponse.data);
-      }
 
       if (settingsResponse.data) {
         const normalizedSettings = { ...settingsResponse.data };
@@ -38,27 +34,21 @@ const BotConfig = () => {
         });
         settingsForm.setFieldsValue(normalizedSettings);
       }
+      
+      if (flowResponse.data) {
+          flowForm.setFieldsValue({
+              steps: flowResponse.data
+          });
+      }
     } catch (error) {
       message.error(t('bot_config.err_load'));
     }
     setLoading(false);
-  }, [textsForm, settingsForm, t]);
+  }, [settingsForm, flowForm, t]);
 
   useEffect(() => {
     loadConfig();
   }, [loadConfig]);
-
-  const saveTexts = async (values) => {
-    setLoading(true);
-    try {
-      await axios.put('/api/bot-config/texts', values);
-      message.success(t('bot_config.msg_texts_saved'));
-    } catch (error) {
-      message.error(t('bot_config.err_save_texts'));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const saveSettings = async (values) => {
     setLoading(true);
@@ -72,108 +62,139 @@ const BotConfig = () => {
     }
   };
 
+  const saveFlow = async (values) => {
+      setLoading(true);
+      try {
+          // values.steps is already an array of objects
+          await axios.put('/api/bot-config/flow', values.steps);
+          message.success("Структура опроса сохранена!");
+      } catch (error) {
+          message.error("Ошибка сохранения структуры.");
+      } finally {
+          setLoading(false);
+      }
+  };
+
   const tabItems = [
     {
-      key: 'texts',
-      label: t('bot_config.tab_texts'),
+      key: 'flow',
+      label: '🚀 Конструктор опроса',
+      forceRender: true,
       children: (
-        <Card title={t('bot_config.card_text_constructor')}>
-          <Form form={textsForm} layout="vertical" onFinish={saveTexts}>
-            <Form.Item label={t('bot_config.welcome_msg_label')} name="welcome_msg" rules={requiredRule}>
-              <TextArea rows={3} />
-            </Form.Item>
+        <Card title="Настройка логики (Визуальный редактор)">
+           <Alert
+              message="Внимание"
+              description="Здесь вы можете визуально изменить шаги опроса бота."
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          <Form form={flowForm} layout="vertical" onFinish={saveFlow}>
+            <Form.List name="steps">
+              {(fields, { add, remove, move }) => (
+                <>
+                  {fields.map(({ key, name, ...restField }, index) => (
+                    <Card size="small" key={key} style={{ marginBottom: 16, borderLeft: '4px solid #1890ff' }}
+                      title={
+                        <Space>
+                          <strong>Шаг {index + 1}</strong>
+                          <Button size="small" icon={<ArrowUpOutlined />} disabled={index === 0} onClick={() => move(index, index - 1)} />
+                          <Button size="small" icon={<ArrowDownOutlined />} disabled={index === fields.length - 1} onClick={() => move(index, index + 1)} />
+                        </Space>
+                      }
+                      extra={<MinusCircleOutlined style={{ color: 'red' }} onClick={() => remove(name)} />}
+                    >
+                      <Row gutter={16}>
+                        <Col span={8}>
+                          <Form.Item {...restField} name={[name, 'id']} label="ID поля (напр. age)" rules={[{ required: true, message: 'Укажите ID' }]}>
+                            <Input placeholder="Внутренний ID" />
+                          </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                          <Form.Item {...restField} name={[name, 'type']} label="Тип вопроса" rules={[{ required: true, message: 'Выберите тип' }]}>
+                            <Select>
+                              <Select.Option value="text">Текст (пользователь вводит)</Select.Option>
+                              <Select.Option value="choice">Кнопки (выбор)</Select.Option>
+                              <Select.Option value="photo">Фото / Документ</Select.Option>
+                            </Select>
+                          </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                           <Form.Item {...restField} name={[name, 'label_key']} label="Ключ перевода (Опционально)">
+                            <Input placeholder="Напр: step_dim_text" />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+                      
+                      <Form.Item {...restField} name={[name, 'label']} label="Текст вопроса (если не используете перевод)">
+                        <TextArea rows={2} placeholder="Введите текст вопроса, который увидит пользователь..." />
+                      </Form.Item>
 
-            <Divider>{t('bot_config.divider_step1')}</Divider>
+                      {/* Render options ONLY if type is 'choice' */}
+                      <Form.Item
+                        noStyle
+                        shouldUpdate={(prevValues, currentValues) => prevValues.steps?.[name]?.type !== currentValues.steps?.[name]?.type}
+                      >
+                        {({ getFieldValue }) => {
+                          const stepType = getFieldValue(['steps', name, 'type']);
+                          if (stepType === 'choice') {
+                            return (
+                              <div style={{ backgroundColor: '#f5f5f5', padding: '16px', borderRadius: '4px', marginTop: '16px' }}>
+                                <h4>Кнопки выбора:</h4>
+                                <Form.List name={[name, 'options']}>
+                                  {(optFields, { add: addOpt, remove: optRemove }) => (
+                                    <>
+                                      {optFields.map(({ key: optKey, name: optName, ...optRestField }) => (
+                                        <Row key={optKey} gutter={8} style={{ marginBottom: 8 }}>
+                                          <Col span={8}>
+                                            <Form.Item {...optRestField} name={[optName, 'val']} rules={[{ required: true, message: 'Укажите значение' }]} style={{ marginBottom: 0 }}>
+                                              <Input placeholder="Значение (val)" />
+                                            </Form.Item>
+                                          </Col>
+                                          <Col span={10}>
+                                            <Form.Item {...optRestField} name={[optName, 'label']} rules={[{ required: true, message: 'Укажите текст кнопки' }]} style={{ marginBottom: 0 }}>
+                                              <Input placeholder="Текст кнопки" />
+                                            </Form.Item>
+                                          </Col>
+                                          <Col span={4}>
+                                             <Form.Item {...optRestField} name={[optName, 'label_key']} style={{ marginBottom: 0 }}>
+                                              <Input placeholder="Ключ перевода" />
+                                            </Form.Item>
+                                          </Col>
+                                          <Col span={2}>
+                                            <Button type="text" danger icon={<MinusCircleOutlined />} onClick={() => optRemove(optName)} />
+                                          </Col>
+                                        </Row>
+                                      ))}
+                                      <Button type="dashed" onClick={() => addOpt()} block icon={<PlusOutlined />}>
+                                        Добавить кнопку
+                                      </Button>
+                                    </>
+                                  )}
+                                </Form.List>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      </Form.Item>
 
-            <Form.Item label={t('bot_config.step_photo_text_label')} name="step_photo_text" rules={requiredRule}>
-              <TextArea rows={2} />
-            </Form.Item>
-            <Form.Item label={t('bot_config.btn_skip_photo_label')} name="btn_skip_photo" rules={requiredRule}>
-              <Input />
-            </Form.Item>
-
-            <Divider>{t('bot_config.divider_step2')}</Divider>
-
-            <Form.Item label={t('bot_config.step_type_text_label')} name="step_type_text" rules={requiredRule}>
-              <TextArea rows={2} />
-            </Form.Item>
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Form.Item label={t('bot_config.btn_type_repair_label')} name="btn_type_repair" rules={requiredRule}>
-                <Input />
-              </Form.Item>
-              <Form.Item label={t('bot_config.btn_type_copy_label')} name="btn_type_copy" rules={requiredRule}>
-                <Input />
-              </Form.Item>
-              <Form.Item label={t('bot_config.btn_type_drawing_label')} name="btn_type_drawing" rules={requiredRule}>
-                <Input />
-              </Form.Item>
-            </Space>
-
-            <Divider>{t('bot_config.divider_step3')}</Divider>
-
-            <Form.Item label={t('bot_config.step_dim_text_label')} name="step_dim_text" rules={requiredRule}>
-              <TextArea rows={3} />
-            </Form.Item>
-
-            <Divider>{t('bot_config.divider_step4')}</Divider>
-
-            <Form.Item label={t('bot_config.step_cond_text_label')} name="step_cond_text" rules={requiredRule}>
-              <TextArea rows={2} />
-            </Form.Item>
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Form.Item label={t('bot_config.btn_cond_rotation_label')} name="btn_cond_rotation" rules={requiredRule}>
-                <Input />
-              </Form.Item>
-              <Form.Item label={t('bot_config.btn_cond_static_label')} name="btn_cond_static" rules={requiredRule}>
-                <Input />
-              </Form.Item>
-              <Form.Item label={t('bot_config.btn_cond_impact_label')} name="btn_cond_impact" rules={requiredRule}>
-                <Input />
-              </Form.Item>
-              <Form.Item label={t('bot_config.btn_cond_unknown_label')} name="btn_cond_unknown" rules={requiredRule}>
-                <Input />
-              </Form.Item>
-            </Space>
-
-            <Divider>{t('bot_config.divider_step5')}</Divider>
-
-            <Form.Item label={t('bot_config.step_urgency_text_label')} name="step_urgency_text" rules={requiredRule}>
-              <TextArea rows={2} />
-            </Form.Item>
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Form.Item label={t('bot_config.btn_urgency_high_label')} name="btn_urgency_high" rules={requiredRule}>
-                <Input />
-              </Form.Item>
-              <Form.Item label={t('bot_config.btn_urgency_med_label')} name="btn_urgency_med" rules={requiredRule}>
-                <Input />
-              </Form.Item>
-              <Form.Item label={t('bot_config.btn_urgency_low_label')} name="btn_urgency_low" rules={requiredRule}>
-                <Input />
-              </Form.Item>
-            </Space>
-
-            <Divider>{t('bot_config.divider_final')}</Divider>
-
-            <Form.Item label={t('bot_config.step_final_text_label')} name="step_final_text" rules={requiredRule}>
-              <TextArea rows={2} />
-            </Form.Item>
-            <Form.Item label={t('bot_config.msg_done_label')} name="msg_done" rules={requiredRule}>
-              <TextArea rows={2} />
-            </Form.Item>
-            <Form.Item label={t('bot_config.err_photo_required_label')} name="err_photo_required" rules={requiredRule}>
-              <TextArea rows={2} />
-            </Form.Item>
-            <Form.Item label={t('bot_config.msg_order_canceled_label')} name="msg_order_canceled" rules={requiredRule}>
-              <Input />
-            </Form.Item>
-
-            <Form.Item style={{ textAlign: 'right' }}>
+                    </Card>
+                  ))}
+                  <Button type="dashed" onClick={() => add({ type: 'text' })} block icon={<PlusOutlined />}>
+                    Добавить новый шаг
+                  </Button>
+                </>
+              )}
+            </Form.List>
+            
+            <Form.Item style={{ textAlign: 'right', marginTop: 24 }}>
               <Space>
                 <Button icon={<ReloadOutlined />} onClick={loadConfig}>
                   {t('reset')}
                 </Button>
                 <Button type="primary" icon={<SaveOutlined />} htmlType="submit" loading={loading}>
-                  {t('bot_config.save_texts')}
+                  Сохранить структуру
                 </Button>
               </Space>
             </Form.Item>
@@ -181,6 +202,7 @@ const BotConfig = () => {
         </Card>
       )
     },
+
     {
       key: 'settings',
       label: t('bot_config.tab_settings'),
@@ -252,7 +274,7 @@ const BotConfig = () => {
         style={{ marginBottom: 24 }}
       />
 
-      <Tabs defaultActiveKey="texts" items={tabItems} />
+      <Tabs defaultActiveKey="flow" items={tabItems} />
     </div>
   );
 };

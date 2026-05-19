@@ -58,7 +58,8 @@ INSERT IGNORE INTO `bot_config` (`cfg_key`, `cfg_value`, `description`) VALUES
 ('err_admin_not_set', '⚠️ Администратор еще не настроен.', 'Ошибка: админ не задан'),
 ('err_no_active_order', 'У вас нет активных заказов. Отправьте /start для нового.', 'Ошибка: нет активного заказа'),
 ('step_extra_text', '📝 *Дополнительно*\nЕсть ли еще что-то важное по детали?', 'Дополнительный вопрос'),
-('step_extra_enabled', '0', '1 = Доп. вопрос включен, 0 = Выключен');
+('step_extra_enabled', '0', '1 = Доп. вопрос включен, 0 = Выключен'),
+('survey_flow', '[{"id": "photo", "type": "photo", "label_key": "step_photo_text", "required_key": "is_photo_required"}, {"id": "work_type", "type": "choice", "label_key": "step_type_text", "options": [{"val": "type_repair", "label_key": "btn_type_repair"}, {"val": "type_copy", "label_key": "btn_type_copy"}, {"val": "type_drawing", "label_key": "btn_type_drawing"}]}, {"id": "dimensions", "type": "text", "label_key": "step_dim_text"}, {"id": "conditions", "type": "choice", "label_key": "step_cond_text", "options": [{"val": "cond_rotation", "label_key": "btn_cond_rotation"}, {"val": "cond_static", "label_key": "btn_cond_static"}, {"val": "cond_impact", "label_key": "btn_cond_impact"}, {"val": "cond_unknown", "label_key": "btn_cond_unknown"}]}, {"id": "urgency", "type": "choice", "label_key": "step_urgency_text", "options": [{"val": "urgency_high", "label_key": "btn_urgency_high"}, {"val": "urgency_med", "label_key": "btn_urgency_med"}, {"val": "urgency_low", "label_key": "btn_urgency_low"}]}, {"id": "comment", "type": "text", "label_key": "step_final_text"}]', 'Конструктор опроса (JSON)');
 
 -- Таблица языковых предпочтений пользователей
 CREATE TABLE IF NOT EXISTS `user_prefs` (

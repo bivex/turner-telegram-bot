@@ -20,13 +20,7 @@ bot = Bot(token=config.BOT_TOKEN)
 dp = Dispatcher()
 
 class OrderForm(StatesGroup):
-    photo = State()
-    work_type = State()
-    dimensions = State()
-    conditions = State()
-    urgency = State()
-    extra_q = State()
-    comment = State()
+    survey = State()
 
 # --- HELPERS ---
 def _lang(user_id: int) -> str:
@@ -38,6 +32,98 @@ def _admin_lang() -> str:
     if aid and aid != '0':
         return database.get_user_language(int(aid))
     return 'ru'
+
+async def get_survey_flow():
+    cfg = database.get_bot_config()
+    flow_raw = cfg.get('survey_flow', '[]')
+    if isinstance(flow_raw, str):
+        import json
+        return json.loads(flow_raw)
+    return flow_raw
+
+async def ask_step(message: types.Message, state: FSMContext, step_index: int = 0):
+    flow = await get_survey_flow()
+    if step_index >= len(flow):
+        data = await state.get_data()
+        await finalize_order(message, data['order_id'], "")
+        await state.clear()
+        return
+
+    step = flow[step_index]
+    lang = _lang(message.from_user.id)
+    
+    # Получаем текст вопроса (либо из перевода, либо напрямую)
+    text = i18n.t(step.get('label_key'), lang) if step.get('label_key') else step.get('label', '...')
+    
+    kb = None
+    if step['type'] == 'photo':
+        kb = kb_photo_step_dynamic(lang, step)
+    elif step['type'] == 'choice':
+        btns = []
+        for opt in step.get('options', []):
+            opt_text = i18n.t(opt.get('label_key'), lang) if opt.get('label_key') else opt.get('label', opt['val'])
+            btns.append([InlineKeyboardButton(text=opt_text, callback_data=f"flow_val:{opt['val']}")])
+        kb = InlineKeyboardMarkup(inline_keyboard=btns)
+
+    await state.update_data(current_step=step_index)
+    
+    if kb:
+        await message.answer(text, reply_markup=kb, parse_mode="Markdown")
+    else:
+        await message.answer(text, reply_markup=types.ReplyKeyboardRemove(), parse_mode="Markdown")
+
+def kb_photo_step_dynamic(lang, step):
+    buttons = [[KeyboardButton(text=i18n.t('btn_photos_done', lang))]]
+    is_required = get_config_bool(step.get('required_key')) if step.get('required_key') else False
+    if not is_required:
+        buttons.append([KeyboardButton(text=i18n.t('btn_skip_photo', lang))])
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True, one_time_keyboard=True)
+
+
+async def get_survey_flow():
+    cfg = database.get_bot_config()
+    flow_raw = cfg.get('survey_flow', '[]')
+    if isinstance(flow_raw, str):
+        import json
+        return json.loads(flow_raw)
+    return flow_raw
+
+async def ask_step(message: types.Message, state: FSMContext, step_index: int = 0):
+    flow = await get_survey_flow()
+    if step_index >= len(flow):
+        data = await state.get_data()
+        await finalize_order(message, data['order_id'], "")
+        await state.clear()
+        return
+
+    step = flow[step_index]
+    lang = _lang(message.from_user.id)
+    
+    text = i18n.t(step.get('label_key'), lang) if step.get('label_key') else step.get('label', '...')
+    
+    kb = None
+    if step['type'] == 'photo':
+        kb = kb_photo_step_dynamic(lang, step)
+    elif step['type'] == 'choice':
+        btns = []
+        for opt in step.get('options', []):
+            opt_text = i18n.t(opt.get('label_key'), lang) if opt.get('label_key') else opt.get('label', opt['val'])
+            btns.append([InlineKeyboardButton(text=opt_text, callback_data=f"flow_val:{opt['val']}")])
+        kb = InlineKeyboardMarkup(inline_keyboard=btns)
+
+    await state.update_data(current_step=step_index)
+    
+    if kb:
+        await message.answer(text, reply_markup=kb, parse_mode="Markdown")
+    else:
+        await message.answer(text, reply_markup=types.ReplyKeyboardRemove(), parse_mode="Markdown")
+
+def kb_photo_step_dynamic(lang, step):
+    buttons = [[KeyboardButton(text=i18n.t('btn_photos_done', lang))]]
+    is_required = get_config_bool(step.get('required_key')) if step.get('required_key') else False
+    if not is_required:
+        buttons.append([KeyboardButton(text=i18n.t('btn_skip_photo', lang))])
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True, one_time_keyboard=True)
 
 def get_config_bool(key):
     cfg = database.get_bot_config()
@@ -120,12 +206,13 @@ async def cb_new_order(callback: types.CallbackQuery, state: FSMContext):
     full_name = callback.from_user.full_name
     order_id = database.create_order(user_id, username, full_name)
 
-    await state.update_data(order_id=order_id, photo_ids=[])
+    await state.update_data(order_id=order_id, photo_ids=[], current_step=0)
+    await state.set_state(OrderForm.survey)
 
     label = i18n.t('new_order_label', lang, order_id=order_id)
-    await callback.message.edit_text(f"{label}\n\n{i18n.t('step_photo_text', lang)}", reply_markup=None, parse_mode="Markdown")
-    await callback.message.answer(i18n.t('step_photo_text', lang), reply_markup=kb_photo_step(lang), parse_mode="Markdown")
-    await state.set_state(OrderForm.photo)
+    await callback.message.edit_text(label, reply_markup=None, parse_mode="Markdown")
+    
+    await ask_step(callback.message, state, 0)
     await callback.answer()
 
 @dp.callback_query(F.data == "start_cancel")
@@ -169,138 +256,76 @@ async def process_lang(callback: types.CallbackQuery):
     await callback.message.edit_text(i18n.t('lang_changed', new_lang))
     await callback.answer()
 
-# 1. PHOTO
-@dp.message(OrderForm.photo, F.photo | F.document)
-async def process_photo(message: types.Message, state: FSMContext):
+@dp.callback_query(OrderForm.survey, F.data.startswith("flow_val:"))
+async def process_choice(callback: types.CallbackQuery, state: FSMContext):
+    val = callback.data.split(":", 1)[1]
+    data = await state.get_data()
+    flow = await get_survey_flow()
+    step_idx = data.get('current_step', 0)
+    if step_idx >= len(flow):
+        await callback.answer()
+        return
+    step = flow[step_idx]
+    
+    lang = _lang(callback.from_user.id)
+    human = val
+    for opt in step.get('options', []):
+        if opt['val'] == val:
+            human = i18n.t(opt.get('label_key'), lang) if opt.get('label_key') else opt.get('label', val)
+            break
+
+    database.update_order_data_json(data['order_id'], step['id'], human)
+    
+    await callback.message.edit_text(i18n.t('label_chosen', lang, human=human))
+    await ask_step(callback.message, state, step_idx + 1)
+    await callback.answer()
+
+@dp.message(OrderForm.survey)
+async def process_survey_message(message: types.Message, state: FSMContext):
     lang = _lang(message.from_user.id)
     data = await state.get_data()
-    p_ids = data.get('photo_ids', [])
-
-    if message.photo:
-        p_ids.append(f"p:{message.photo[-1].file_id}")
-    elif message.document and message.document.mime_type.startswith('image/'):
-        p_ids.append(f"d:{message.document.file_id}")
-    else:
-        await message.answer(i18n.t('err_send_image_not_other', lang))
+    flow = await get_survey_flow()
+    
+    step_idx = data.get('current_step', 0)
+    if step_idx >= len(flow):
+        await state.clear()
         return
 
-    await state.update_data(photo_ids=p_ids)
-    await message.answer(i18n.t('msg_photo_accepted_count', lang, count=len(p_ids)), reply_markup=kb_photo_step(lang))
+    step = flow[step_idx]
 
-@dp.message(OrderForm.photo)
-async def process_photo_done(message: types.Message, state: FSMContext):
-    lang = _lang(message.from_user.id)
-    txt = safe_text(message, lang)
-    data = await state.get_data()
-    p_ids = data.get('photo_ids', [])
-    photos_done_btn = i18n.t('btn_photos_done', lang)
-    skip_btn = i18n.t('btn_skip_photo', lang)
-
-    if txt == photos_done_btn:
-        if not p_ids:
-            await message.answer(i18n.t('err_no_photos_uploaded', lang))
+    if step['type'] == 'photo':
+        if message.photo or (message.document and message.document.mime_type.startswith('image/')):
+            p_ids = data.get('photo_ids', [])
+            if message.photo:
+                p_ids.append(f"p:{message.photo[-1].file_id}")
+            else:
+                p_ids.append(f"d:{message.document.file_id}")
+            await state.update_data(photo_ids=p_ids)
+            await message.answer(i18n.t('msg_photo_accepted_count', lang, count=len(p_ids)), reply_markup=kb_photo_step_dynamic(lang, step))
             return
-        database.update_order_field(data['order_id'], 'photo_file_id', ",".join(p_ids))
-        await message.answer(i18n.t('msg_photos_accepted', lang), reply_markup=types.ReplyKeyboardRemove())
-        await ask_work_type(message, state)
 
-    elif txt == skip_btn:
-        if get_config_bool('is_photo_required'):
-            await message.answer(i18n.t('err_photo_required', lang))
+        txt = safe_text(message, lang)
+        if txt == i18n.t('btn_photos_done', lang):
+            if not data.get('photo_ids'):
+                await message.answer(i18n.t('err_no_photos_uploaded', lang))
+                return
+            database.update_order_field(data['order_id'], 'photo_file_id', ",".join(data['photo_ids']))
+            await message.answer(i18n.t('msg_photos_accepted', lang), reply_markup=types.ReplyKeyboardRemove())
+            await ask_step(message, state, step_idx + 1)
+        elif txt == i18n.t('btn_skip_photo', lang):
+            is_required = get_config_bool(step.get('required_key')) if step.get('required_key') else False
+            if is_required:
+                await message.answer(i18n.t('err_photo_required', lang))
+            else:
+                await message.answer(i18n.t('msg_ok_no_photo', lang), reply_markup=types.ReplyKeyboardRemove())
+                await ask_step(message, state, step_idx + 1)
         else:
-            await message.answer(i18n.t('msg_ok_no_photo', lang), reply_markup=types.ReplyKeyboardRemove())
-            await ask_work_type(message, state)
-    else:
-        if get_config_bool('is_photo_required') and not p_ids:
-            await message.answer(i18n.t('err_photo_required', lang))
-            return
-        await check_lost_state(message, state)
+            await message.answer(i18n.t('err_send_image_not_other', lang))
 
-async def ask_work_type(message, state):
-    lang = _lang(message.from_user.id)
-    await message.answer(i18n.t('step_type_text', lang), reply_markup=kb_work_type(lang), parse_mode="Markdown")
-    await state.set_state(OrderForm.work_type)
-
-# 2. WORK TYPE
-@dp.callback_query(OrderForm.work_type)
-async def process_work_type(callback: types.CallbackQuery, state: FSMContext):
-    lang = _lang(callback.from_user.id)
-    map_types = {'type_repair': 'btn_type_repair', 'type_copy': 'btn_type_copy', 'type_drawing': 'btn_type_drawing'}
-    key = map_types.get(callback.data)
-    human = i18n.t(key, lang)
-
-    database.update_order_data_json((await state.get_data())['order_id'], 'work_type', human)
-
-    await callback.message.edit_text(i18n.t('label_chosen', lang, human=human))
-    await callback.message.answer(i18n.t('step_dim_text', lang), parse_mode="Markdown")
-    await state.set_state(OrderForm.dimensions)
-
-# 3. DIMENSIONS
-@dp.message(OrderForm.dimensions)
-async def process_dimensions(message: types.Message, state: FSMContext):
-    lang = _lang(message.from_user.id)
-    txt = safe_text(message, lang)
-    database.update_order_data_json((await state.get_data())['order_id'], 'dimensions', txt)
-
-    btns = [
-        [InlineKeyboardButton(text=i18n.t('btn_cond_rotation', lang), callback_data="cond_rotation")],
-        [InlineKeyboardButton(text=i18n.t('btn_cond_static', lang), callback_data="cond_static")],
-        [InlineKeyboardButton(text=i18n.t('btn_cond_impact', lang), callback_data="cond_impact")],
-        [InlineKeyboardButton(text=i18n.t('btn_cond_unknown', lang), callback_data="cond_unknown")]
-    ]
-    await message.answer(i18n.t('step_cond_text', lang), reply_markup=InlineKeyboardMarkup(inline_keyboard=btns), parse_mode="Markdown")
-    await state.set_state(OrderForm.conditions)
-
-# 4. CONDITIONS
-@dp.callback_query(OrderForm.conditions)
-async def process_conditions(callback: types.CallbackQuery, state: FSMContext):
-    lang = _lang(callback.from_user.id)
-    map_cond = {'cond_rotation': 'btn_cond_rotation', 'cond_static': 'btn_cond_static', 'cond_impact': 'btn_cond_impact', 'cond_unknown': 'btn_cond_unknown'}
-    human = i18n.t(map_cond.get(callback.data), lang)
-
-    database.update_order_data_json((await state.get_data())['order_id'], 'conditions', human)
-
-    await callback.message.edit_text(i18n.t('label_chosen', lang, human=human))
-    await callback.message.answer(i18n.t('step_urgency_text', lang), reply_markup=kb_urgency(lang), parse_mode="Markdown")
-    await state.set_state(OrderForm.urgency)
-
-# 5. URGENCY
-@dp.callback_query(OrderForm.urgency)
-async def process_urgency(callback: types.CallbackQuery, state: FSMContext):
-    lang = _lang(callback.from_user.id)
-    map_urg = {'urgency_high': 'btn_urgency_high', 'urgency_med': 'btn_urgency_med', 'urgency_low': 'btn_urgency_low'}
-    human = i18n.t(map_urg.get(callback.data), lang)
-
-    database.update_order_data_json((await state.get_data())['order_id'], 'urgency', human)
-    await callback.message.edit_text(i18n.t('label_chosen', lang, human=human))
-
-    if get_config_bool('step_extra_enabled'):
-        await callback.message.answer(i18n.t('step_extra_text', lang), parse_mode="Markdown")
-        await state.set_state(OrderForm.extra_q)
-    else:
-        await ask_final(callback.message, state)
-
-@dp.message(OrderForm.extra_q)
-async def process_extra(message: types.Message, state: FSMContext):
-    lang = _lang(message.from_user.id)
-    txt = safe_text(message, lang)
-    await state.update_data(temp_comment=i18n.t('msg_extra_prefix', lang, text=txt))
-    await ask_final(message, state)
-
-async def ask_final(message, state):
-    lang = _lang(message.from_user.id)
-    await message.answer(i18n.t('step_final_text', lang), parse_mode="Markdown")
-    await state.set_state(OrderForm.comment)
-
-# 6. FINAL
-@dp.message(OrderForm.comment)
-async def process_comment(message: types.Message, state: FSMContext):
-    lang = _lang(message.from_user.id)
-    data = await state.get_data()
-    comm = safe_text(message, lang)
-    final_comm = data.get('temp_comment', '') + comm
-    await finalize_order(message, data['order_id'], final_comm)
-    await state.clear()
+    elif step['type'] == 'text':
+        txt = safe_text(message, lang)
+        database.update_order_data_json(data['order_id'], step['id'], txt)
+        await ask_step(message, state, step_idx + 1)
 
 async def finalize_order(message, order_id, comment_text):
     lang = _lang(message.from_user.id)
@@ -410,39 +435,19 @@ async def check_lost_state(message, state):
     filling_id = database.get_active_order_id(message.from_user.id)
 
     if filling_id:
-        order = database.get_order(filling_id)
-        has_photos = order['photo_file_id'] is not None and len(str(order['photo_file_id'])) > 5
-        data = order.get('order_data') or {}
-
-        if not has_photos:
-            if message.photo or (message.document and message.document.mime_type.startswith('image/')):
-                if state: await state.set_state(OrderForm.photo)
-                await process_photo(message, state or FSMContext(storage=dp.storage, key=types.StorageKey(bot.id, message.chat.id, message.from_user.id)))
+        if state:
+            data = await state.get_data()
+            if 'current_step' not in data:
+                await state.update_data(order_id=filling_id, photo_ids=[], current_step=0)
+                await state.set_state(OrderForm.survey)
+                await ask_step(message, state, 0)
                 return
-
-            if get_config_bool('is_photo_required'):
-                await message.answer(i18n.t('err_photo_required', lang))
-                return
-
-            if state:
-                await state.update_data(order_id=filling_id)
-                await state.set_state(OrderForm.photo)
-            await process_photo_done(message, state or FSMContext(storage=dp.storage, key=types.StorageKey(bot.id, message.chat.id, message.from_user.id)))
-            return
-
-        if not data.get('work_type'):
-            await message.answer(i18n.t('msg_restoring_type', lang), reply_markup=kb_work_type(lang))
-            if state: await state.set_state(OrderForm.work_type)
-            return
-
-        if not data.get('dimensions'):
-            database.update_order_data_json(filling_id, 'dimensions', safe_text(message, lang))
-            btns = [[InlineKeyboardButton(text=i18n.t('btn_cond_rotation', lang), callback_data="cond_rotation")], [InlineKeyboardButton(text=i18n.t('btn_cond_static', lang), callback_data="cond_static")], [InlineKeyboardButton(text=i18n.t('btn_cond_unknown', lang), callback_data="cond_unknown")]]
-            await message.answer(i18n.t('msg_dimensions_recorded', lang, dimensions=safe_text(message, lang)), reply_markup=InlineKeyboardMarkup(inline_keyboard=btns))
-            if state: await state.set_state(OrderForm.conditions)
-            return
-
-        await finalize_order(message, filling_id, safe_text(message, lang))
+            await process_survey_message(message, state)
+        else:
+            state = FSMContext(storage=dp.storage, key=types.StorageKey(bot.id, message.chat.id, message.from_user.id))
+            await state.update_data(order_id=filling_id, photo_ids=[], current_step=0)
+            await state.set_state(OrderForm.survey)
+            await ask_step(message, state, 0)
         return
 
     order_id = database.get_user_last_active_order(message.from_user.id)
