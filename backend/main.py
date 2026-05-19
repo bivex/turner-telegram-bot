@@ -11,7 +11,7 @@ from routers import auth, orders, bot_config, customers, templates
 # Загрузка переменных окружения
 load_dotenv()
 
-app = FastAPI(title="CRM API", description="API для управления заказами токарных работ")
+app = FastAPI(title="CRM API", description="Order management API for lathe work CRM")
 
 # Список разрешенных источников
 frontend_port = os.getenv("FRONTEND_PORT", "3000")
@@ -46,7 +46,7 @@ app.include_router(templates.router, prefix="/api/templates", tags=["templates"]
 
 @app.get("/")
 async def root():
-    return {"message": "CRM API для токарных работ"}
+    return {"message": "CRM API for lathe work"}
 
 @app.get("/health")
 async def health_check():

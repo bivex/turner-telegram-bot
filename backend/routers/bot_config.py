@@ -27,7 +27,7 @@ async def get_bot_config(_payload: dict = Depends(verify_token)) -> Dict[str, An
         config_data = database.get_bot_config()
         return config_data
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка получения настроек: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching settings: {str(e)}")
 
 @router.put("/")
 async def update_bot_config(
@@ -42,9 +42,9 @@ async def update_bot_config(
         else:
             database.update_bot_config(config_update.key, config_update.value)
 
-        return {"message": "Настройка обновлена успешно"}
+        return {"message": "Setting updated successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка обновления настройки: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error updating setting: {str(e)}")
 
 @router.get("/settings")
 async def get_bot_settings(_payload: dict = Depends(verify_token)) -> Dict[str, Any]:
@@ -58,7 +58,7 @@ async def get_bot_settings(_payload: dict = Depends(verify_token)) -> Dict[str, 
         settings = {key: config_data.get(key, '') for key in settings_keys}
         return settings
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка получения настроек: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching settings: {str(e)}")
 
 @router.put("/settings")
 async def update_bot_settings(
@@ -72,9 +72,9 @@ async def update_bot_settings(
                 database.update_setting(key, str(value))
             else:
                 database.update_bot_config(key, str(value))
-        return {"message": "Настройки обновлены успешно"}
+        return {"message": "Settings updated successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка обновления настроек: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error updating settings: {str(e)}")
 
 @router.get("/flow")
 async def get_survey_flow(_payload: dict = Depends(verify_token)) -> List[Dict[str, Any]]:
@@ -87,7 +87,7 @@ async def get_survey_flow(_payload: dict = Depends(verify_token)) -> List[Dict[s
             return json.loads(flow_raw)
         return flow_raw
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка получения структуры: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching survey flow: {str(e)}")
 
 @router.put("/flow")
 async def update_survey_flow(
@@ -98,9 +98,9 @@ async def update_survey_flow(
     try:
         import json
         database.update_bot_config('survey_flow', json.dumps(flow, ensure_ascii=False))
-        return {"message": "Структура опроса обновлена"}
+        return {"message": "Survey flow updated successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка обновления структуры: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error updating survey flow: {str(e)}")
 
 # --- Admin Management ---
 

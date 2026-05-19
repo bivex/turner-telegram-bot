@@ -40,7 +40,7 @@ async def login(request: LoginRequest):
     admin_password = os.getenv("ADMIN_PANEL_PASSWORD", config.get("admin_panel_password", "admin123"))
 
     if request.password != admin_password:
-        raise HTTPException(status_code=401, detail="Неверный пароль")
+        raise HTTPException(status_code=401, detail="Wrong password")
 
     access_token = create_access_token(data={"sub": "admin"})
     return {"token": access_token, "token_type": "bearer"}

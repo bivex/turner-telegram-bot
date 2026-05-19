@@ -57,7 +57,7 @@ async def get_orders(
         orders = database.get_orders_paginated(limit, offset, status_filter)
         return orders
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка получения заказов: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching orders: {str(e)}")
 
 @router.get("/stats", response_model=OrderStats)
 async def get_order_stats(_payload: dict = Depends(verify_token)):
@@ -66,7 +66,7 @@ async def get_order_stats(_payload: dict = Depends(verify_token)):
         stats = database.get_order_statistics()
         return stats
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка получения статистики: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching statistics: {str(e)}")
 
 
 @router.get("/export/csv")
@@ -204,12 +204,12 @@ async def get_order(order_id: int, _payload: dict = Depends(verify_token)):
     try:
         order = database.get_order(order_id)
         if not order:
-            raise HTTPException(status_code=404, detail="Заказ не найден")
+            raise HTTPException(status_code=404, detail="Order not found")
         return order
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка получения заказа: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching order: {str(e)}")
 
 
 @router.get("/{order_id}/invoice")
@@ -299,7 +299,7 @@ async def update_order(
     try:
         current_order = database.get_order(order_id)
         if not current_order:
-            raise HTTPException(status_code=404, detail="Заказ не найден")
+            raise HTTPException(status_code=404, detail="Order not found")
 
         old_status = current_order.get('status')
 
@@ -327,12 +327,12 @@ async def update_order(
         if order_update.deadline is not None:
             database.set_order_deadline(order_id, order_update.deadline)
 
-        return {"message": "Заказ обновлен успешно"}
+        return {"message": "Order updated successfully"}
     except HTTPException:
         raise
     except Exception as e:
         print(f"Update order error: {e}")
-        raise HTTPException(status_code=500, detail=f"Ошибка обновления заказа: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error updating order: {str(e)}")
 
 
 @router.put("/{order_id}/price")
@@ -369,9 +369,9 @@ async def delete_all_orders(_payload: dict = Depends(verify_token)):
     """Удалить все заказы"""
     try:
         database.delete_all_orders()
-        return {"message": "Все заказы удалены"}
+        return {"message": "All orders deleted"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка удаления заказов: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error deleting orders: {str(e)}")
 
 
 async def send_status_update_notification(user_id: int, order_id: int, new_status: str):
@@ -485,4 +485,4 @@ async def get_order_photos(order_id: int, _payload: dict = Depends(verify_token)
         return {"photos": photo_urls}
     except Exception as e:
         print(f"Get photos error: {e}")
-        raise HTTPException(status_code=500, detail=f"Ошибка получения фото: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching photos: {str(e)}")
