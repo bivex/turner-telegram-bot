@@ -3,6 +3,7 @@
 
 import pymysql
 import config
+import json
 
 def get_connection():
     return pymysql.connect(
@@ -63,6 +64,20 @@ def get_order(oid):
         cur.execute("SELECT * FROM orders WHERE id=%s", (oid,))
         res = cur.fetchone()
     conn.close()
+    if res:
+        data = res.get('order_data')
+        if data:
+            if isinstance(data, (str, bytes)):
+                try:
+                    res['order_data'] = json.loads(data)
+                except Exception:
+                    res['order_data'] = {}
+            elif isinstance(data, dict):
+                pass
+            else:
+                res['order_data'] = {}
+        else:
+            res['order_data'] = {}
     return res
 
 def get_active_order_id(user_id):
@@ -111,6 +126,23 @@ def get_orders_paginated(limit=20, offset=0, status_filter=None):
                     LIMIT %s OFFSET %s
                 """, (limit, offset))
             orders = cur.fetchall()
+            
+            # Парсим JSON для каждого заказа
+            for order in orders:
+                data = order.get('order_data')
+                if data:
+                    if isinstance(data, (str, bytes)):
+                        try:
+                            order['order_data'] = json.loads(data)
+                        except Exception:
+                            order['order_data'] = {}
+                    elif isinstance(data, dict):
+                        pass # Already a dict
+                    else:
+                        order['order_data'] = {}
+                else:
+                    order['order_data'] = {}
+            
             return orders
     finally:
         conn.close()

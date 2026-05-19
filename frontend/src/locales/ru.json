@@ -47,6 +47,7 @@
     "col_urgency": "Срочность",
     "col_status": "Статус",
     "col_date": "Дата",
+    "col_details": "Детали",
     "col_actions": "Действия",
     "btn_view": "Просмотр",
     "btn_edit": "Редактировать",

@@ -316,14 +316,7 @@ async def notify_admin(order_id):
 
     al = _admin_lang()
     order = database.get_order(order_id)
-    
-    # Извлекаем данные из JSON
-    import json
-    data = order.get('order_data')
-    if isinstance(data, str):
-        data = json.loads(data)
-    elif data is None:
-        data = {}
+    data = order.get('order_data') or {}
 
     text = i18n.t('msg_new_order_admin', al,
         order_id=order['id'],
@@ -419,14 +412,7 @@ async def check_lost_state(message, state):
     if filling_id:
         order = database.get_order(filling_id)
         has_photos = order['photo_file_id'] is not None and len(str(order['photo_file_id'])) > 5
-
-        # Извлекаем данные из JSON
-        import json
-        data = order.get('order_data')
-        if isinstance(data, str):
-            data = json.loads(data)
-        elif data is None:
-            data = {}
+        data = order.get('order_data') or {}
 
         if not has_photos:
             if message.photo or (message.document and message.document.mime_type.startswith('image/')):
