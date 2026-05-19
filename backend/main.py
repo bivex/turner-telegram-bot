@@ -50,10 +50,12 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
+DEFAULT_PORT = 8000
+
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=int(os.getenv("API_PORT", 8000)),
+        port=int(os.getenv("API_PORT", DEFAULT_PORT)),
         reload=True
     )

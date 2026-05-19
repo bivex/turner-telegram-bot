@@ -15,9 +15,11 @@ ALGORITHM = "HS256"
 class LoginRequest(BaseModel):
     password: str
 
+TOKEN_EXPIRATION_HOURS = 24
+
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+    expire = datetime.utcnow() + timedelta(hours=TOKEN_EXPIRATION_HOURS)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

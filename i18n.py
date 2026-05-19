@@ -48,6 +48,6 @@ def t(key: str, lang: str = DEFAULT_LANG, **kwargs) -> str:
     if kwargs:
         try:
             text = text.format_map(kwargs)
-        except (KeyError, IndexError):
-            pass
+        except (KeyError, IndexError) as e:
+            logging.error(f"Translation formatting error for key '{key}': {e}")
     return text

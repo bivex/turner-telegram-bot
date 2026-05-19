@@ -31,10 +31,12 @@ class OrderStats(BaseModel):
     new_orders: int
     active_orders: int
 
+DEFAULT_PAGE_LIMIT = 20
+
 @router.get("/", response_model=List[OrderBase])
 async def get_orders(
     page: int = 1,
-    limit: int = 20,
+    limit: int = DEFAULT_PAGE_LIMIT,
     status_filter: Optional[str] = None,
     payload: dict = Depends(verify_token)
 ):

@@ -107,7 +107,9 @@ def cancel_old_filling_orders(user_id):
     conn.close()
 
 # --- НОВЫЕ ФУНКЦИИ ДЛЯ FASTAPI ---
-def get_orders_paginated(limit=20, offset=0, status_filter=None):
+DEFAULT_LIMIT = 20
+
+def get_orders_paginated(limit=DEFAULT_LIMIT, offset=0, status_filter=None):
     """Получить заказы с пагинацией"""
     conn = get_connection()
     try:
