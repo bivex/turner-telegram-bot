@@ -103,6 +103,15 @@ async def update_order(
         print(f"Update order error: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка обновления заказа: {str(e)}")
 
+@router.delete("/all")
+async def delete_all_orders(_payload: dict = Depends(verify_token)):
+    """Удалить все заказы"""
+    try:
+        database.delete_all_orders()
+        return {"message": "Все заказы удалены"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка удаления заказов: {str(e)}")
+
 async def send_status_update_notification(user_id: int, order_id: int, new_status: str):
     """Отправить уведомление клиенту через Telegram Bot API"""
     status_map = {

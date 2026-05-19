@@ -5,7 +5,7 @@ import {
 } from 'antd';
 import {
   EyeOutlined, EditOutlined, ShoppingCartOutlined,
-  UserOutlined, SyncOutlined
+  UserOutlined, SyncOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
@@ -245,6 +245,31 @@ const Orders = () => {
             <Option value="rejected">{t('orders.filter_rejected')}</Option>
           </Select>
           <Button onClick={fetchOrders}>{t('orders.refresh')}</Button>
+          <Button
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => {
+              Modal.confirm({
+                title: t('orders.clear_all_confirm_title'),
+                content: t('orders.clear_all_confirm_text'),
+                okText: t('orders.clear_all_btn'),
+                okType: 'danger',
+                cancelText: t('cancel'),
+                onOk: async () => {
+                  try {
+                    await axios.delete('/api/orders/all');
+                    message.success(t('orders.clear_all_success'));
+                    fetchOrders();
+                    fetchStats();
+                  } catch (error) {
+                    message.error(t('orders.clear_all_error'));
+                  }
+                }
+              });
+            }}
+          >
+            {t('orders.clear_all_btn')}
+          </Button>
         </Space>
       </Card>
 

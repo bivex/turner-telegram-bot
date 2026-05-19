@@ -187,6 +187,15 @@ def get_order_statistics():
     finally:
         conn.close()
 
+def delete_all_orders():
+    """Удалить все заказы"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("TRUNCATE TABLE orders")
+    finally:
+        conn.close()
+
 def update_bot_config(key, value):
     """Обновить настройку бота в таблице bot_config"""
     conn = get_connection()
