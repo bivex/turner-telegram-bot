@@ -8,7 +8,8 @@ import json
 def get_connection():
     return pymysql.connect(
         host=config.DB_HOST, user=config.DB_USER, password=config.DB_PASS,
-        database=config.DB_NAME, cursorclass=pymysql.cursors.DictCursor, autocommit=True
+        database=config.DB_NAME, cursorclass=pymysql.cursors.DictCursor, autocommit=True,
+        charset='utf8mb4'
     )
 
 def get_bot_config():
