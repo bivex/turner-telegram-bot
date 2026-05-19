@@ -65,5 +65,11 @@
   "msg_price_rejected_admin": "❌ Client rejected price for order #{order_id}.",
   "msg_deadline_reminder": "⏰ Reminder: Order #{order_id} will be ready by {deadline}!",
   "msg_broadcast_sent": "📤 Broadcast sent: {count} delivered, {failed} failed.",
-  "msg_broadcast_prompt": "Send the message text to broadcast to all customers:"
+  "msg_broadcast_prompt": "Send the message text to broadcast to all customers:",
+  "msg_no_templates": "📋 No saved templates.",
+  "msg_templates_list": "📋 Templates:",
+  "msg_template_body": "📋 <b>{name}</b>\n\n{body}\n\n↩️ Reply to client message + /sendtpl {id} order_number",
+  "msg_template_not_found": "Template not found.",
+  "msg_sendtpl_format": "Format: /sendtpl template_id order_id",
+  "msg_sendtpl_bad_id": "⚠️ Invalid IDs. Format: /sendtpl template_id order_id"
 }

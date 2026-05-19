@@ -63,6 +63,7 @@
     "client_info": "👤 Информация о клиенте",
     "name_label": "Имя:",
     "order_details": "📋 Детали заказа",
+    "no_details": "Нет деталей",
     "work_type": "Тип работы:",
     "dimensions": "Размеры:",
     "conditions": "Условия:",

@@ -65,5 +65,11 @@
   "msg_price_rejected_admin": "❌ Клиент отказался от цены по заказу #{order_id}.",
   "msg_deadline_reminder": "⏰ Напоминание: заказ #{order_id} будет готов к {deadline}!",
   "msg_broadcast_sent": "📤 Рассылка отправлена: {count} доставлено, {failed} не доставлено.",
-  "msg_broadcast_prompt": "Отправьте текст сообщения для рассылки всем клиентам:"
+  "msg_broadcast_prompt": "Отправьте текст сообщения для рассылки всем клиентам:",
+  "msg_no_templates": "📋 Нет сохранённых шаблонов.",
+  "msg_templates_list": "📋 Шаблоны:",
+  "msg_template_body": "📋 <b>{name}</b>\n\n{body}\n\n↩️ Reply на сообщение клиента + /sendtpl {id} номер_заказа",
+  "msg_template_not_found": "Шаблон не найден.",
+  "msg_sendtpl_format": "Формат: /sendtpl template_id order_id",
+  "msg_sendtpl_bad_id": "⚠️ Неверные ID. Формат: /sendtpl template_id order_id"
 }

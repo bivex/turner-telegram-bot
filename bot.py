@@ -426,9 +426,10 @@ async def admin_reply_handler(message: types.Message):
 @dp.message(Command("templates"))
 async def cmd_templates(message: types.Message):
     if not database.is_admin(message.chat.id): return
+    lang = _lang(message.from_user.id)
     templates = database.get_templates()
     if not templates:
-        await message.answer("📋 Нет сохранённых шаблонов.")
+        await message.answer(i18n.t('msg_no_templates', lang))
         return
     rows = []
     for tpl in templates:
@@ -436,23 +437,21 @@ async def cmd_templates(message: types.Message):
             text=tpl['name'],
             callback_data=f"tpl_show:{tpl['id']}"
         )])
-    await message.answer("📋 Шаблоны:", reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
+    await message.answer(i18n.t('msg_templates_list', lang), reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
 
 @dp.callback_query(F.data.startswith("tpl_show:"))
 async def cb_tpl_show(callback: types.CallbackQuery):
     if not database.is_admin(callback.from_user.id):
         await callback.answer("⛔", show_alert=True)
         return
+    lang = _lang(callback.from_user.id)
     tid = int(callback.data.split(":")[1])
     tpl = database.get_template(tid)
     if not tpl:
-        await callback.answer("Шаблон не найден", show_alert=True)
+        await callback.answer(i18n.t('msg_template_not_found', lang), show_alert=True)
         return
-    await callback.message.answer(
-        f"📋 <b>{tpl['name']}</b>\n\n{tpl['body']}\n\n"
-        f"↩️ Reply на сообщение клиента + /sendtpl {tid} <code>номер_заказа</code>",
-        parse_mode="HTML"
-    )
+    text = i18n.t('msg_template_body', lang, name=tpl['name'], body=tpl['body'], id=tid)
+    await callback.message.answer(text, parse_mode="HTML")
     await callback.answer()
 
 @dp.message(Command("sendtpl"))
@@ -461,17 +460,17 @@ async def cmd_send_template(message: types.Message):
     lang = _lang(message.from_user.id)
     args = message.text.split()
     if len(args) < 3:
-        await message.answer("Формат: /sendtpl template_id order_id")
+        await message.answer(i18n.t('msg_sendtpl_format', lang))
         return
     try:
         tid, oid = int(args[1]), int(args[2])
     except ValueError:
-        await message.answer("⚠️ Неверные ID. Формат: /sendtpl template_id order_id")
+        await message.answer(i18n.t('msg_sendtpl_bad_id', lang))
         return
 
     tpl = database.get_template(tid)
     if not tpl:
-        await message.answer("Шаблон не найден")
+        await message.answer(i18n.t('msg_template_not_found', lang))
         return
     order = database.get_order(oid)
     if not order:
