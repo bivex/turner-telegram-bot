@@ -6,6 +6,7 @@ import logging
 import re
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (
@@ -422,48 +423,69 @@ async def admin_reply_handler(message: types.Message):
         await message.answer(i18n.t('msg_fatal_error', lang, error=e))
 
 # --- MY ORDERS ---
-@dp.message(Command("myorders"))
-async def cmd_my_orders(message: types.Message):
-    orders = database.get_user_orders(message.from_user.id, limit=5, offset=0)
-    lang = _lang(message.from_user.id)
-    if not orders:
-        await message.answer(i18n.t('msg_no_orders_history', lang))
-        return
-    text_lines = [i18n.t('msg_order_history_header', lang)]
+MYORDERS_PER_PAGE = 5
+
+def _build_orders_text(orders, lang):
+    status_map = {
+        'filling': '📝', 'new': '🔥', 'discussion': '💬',
+        'approved': '🛠', 'work': '⚙️', 'done': '✅', 'rejected': '❌'
+    }
+    lines = [i18n.t('msg_order_history_header', lang)]
     for order in orders:
-        status_map = {
-            'filling': '📝', 'new': '🔥', 'discussion': '💬',
-            'approved': '🛠', 'work': '⚙️', 'done': '✅', 'rejected': '❌'
-        }
         emoji = status_map.get(order['status'], '📦')
         date = order['created_at'].strftime('%d.%m.%Y') if order.get('created_at') else ''
         line = f"{emoji} #{order['id']} — {order['status']} — {date}"
         if order.get('price'):
             line += f" — {order['price']} {order.get('price_currency', 'UAH')}"
-        text_lines.append(line)
-    await message.answer('\n'.join(text_lines))
+        lines.append(line)
+    return '\n'.join(lines)
+
+def _orders_kb(user_id, page):
+    offset = page * MYORDERS_PER_PAGE
+    orders = database.get_user_orders(user_id, limit=MYORDERS_PER_PAGE + 1, offset=offset)
+    has_next = len(orders) > MYORDERS_PER_PAGE
+    orders = orders[:MYORDERS_PER_PAGE]
+    rows = []
+    if page > 0:
+        rows.append(InlineKeyboardButton(text="⬅️", callback_data=f"myorders:{page-1}"))
+    if has_next:
+        rows.append(InlineKeyboardButton(text="➡️", callback_data=f"myorders:{page+1}"))
+    kb = InlineKeyboardMarkup(inline_keyboard=[rows]) if rows else None
+    return orders, kb
+
+@dp.message(Command("myorders"))
+async def cmd_my_orders(message: types.Message):
+    lang = _lang(message.from_user.id)
+    orders, kb = _orders_kb(message.from_user.id, 0)
+    if not orders:
+        await message.answer(i18n.t('msg_no_orders_history', lang))
+        return
+    await message.answer(_build_orders_text(orders, lang), reply_markup=kb)
 
 @dp.callback_query(F.data == "start_myorders")
 async def cb_myorders(callback: types.CallbackQuery):
-    orders = database.get_user_orders(callback.from_user.id, limit=5, offset=0)
     lang = _lang(callback.from_user.id)
+    orders, kb = _orders_kb(callback.from_user.id, 0)
     if not orders:
         await callback.message.answer(i18n.t('msg_no_orders_history', lang))
         await callback.answer()
         return
-    text_lines = [i18n.t('msg_order_history_header', lang)]
-    for order in orders:
-        status_map = {
-            'filling': '📝', 'new': '🔥', 'discussion': '💬',
-            'approved': '🛠', 'work': '⚙️', 'done': '✅', 'rejected': '❌'
-        }
-        emoji = status_map.get(order['status'], '📦')
-        date = order['created_at'].strftime('%d.%m.%Y') if order.get('created_at') else ''
-        line = f"{emoji} #{order['id']} — {order['status']} — {date}"
-        if order.get('price'):
-            line += f" — {order['price']} {order.get('price_currency', 'UAH')}"
-        text_lines.append(line)
-    await callback.message.answer('\n'.join(text_lines))
+    await callback.message.answer(_build_orders_text(orders, lang), reply_markup=kb)
+    await callback.answer()
+
+@dp.callback_query(F.data.startswith("myorders:"))
+async def cb_myorders_page(callback: types.CallbackQuery):
+    page = int(callback.data.split(":")[1])
+    lang = _lang(callback.from_user.id)
+    orders, kb = _orders_kb(callback.from_user.id, page)
+    if not orders:
+        await callback.answer(i18n.t('msg_no_orders_history', lang), show_alert=True)
+        return
+    text = _build_orders_text(orders, lang)
+    try:
+        await callback.message.edit_text(text, reply_markup=kb)
+    except TelegramBadRequest:
+        await callback.message.answer(text, reply_markup=kb)
     await callback.answer()
 
 # --- PRICE ACCEPT/REJECT ---
