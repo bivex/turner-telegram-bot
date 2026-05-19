@@ -186,13 +186,14 @@ async def cmd_start(message: types.Message, state: FSMContext):
 
 async def start_new_order_logic(user_id, username, full_name, lang, message_to_reply, state: FSMContext):
     await state.clear()
+    # Отменяем только ДРУГИЕ черновики, если они есть
     database.cancel_old_filling_orders(user_id)
+    
     order_id = database.create_order(user_id, username, full_name)
     await state.update_data(order_id=order_id, photo_ids=[], current_step=0)
     await state.set_state(OrderForm.survey)
-    label = i18n.t('new_order_label', lang, order_id=order_id)
     
-    # If it's a callback, we might want to edit text, but here we just answer
+    label = i18n.t('new_order_label', lang, order_id=order_id)
     await message_to_reply.answer(label, reply_markup=types.ReplyKeyboardRemove(), parse_mode="HTML")
     await ask_step(message_to_reply, state, 0)
 
@@ -674,9 +675,13 @@ async def user_chat_handler(message: types.Message):
     logging.info(f"General message from {message.from_user.id}: {message.text or '[media]'}")
     
     # Если это админ и он НЕ отвечает на сообщение (нет reply_to_message), 
-    # просто игнорируем или логируем, чтобы не спамить ошибкой "Не вижу номер заказа"
-    if database.is_admin(message.from_user.id) and not message.reply_to_message:
-        logging.info(f"Admin {message.from_user.id} sent a non-reply message. Ignoring.")
+    # и при этом он НЕ находится в процессе оформления заказа (нет активного filling заказа)
+    # то просто игнорируем или логируем.
+    is_admin = database.is_admin(message.from_user.id)
+    filling_id = database.get_active_order_id(message.from_user.id)
+    
+    if is_admin and not message.reply_to_message and not filling_id:
+        logging.info(f"Admin {message.from_user.id} sent a non-reply message and has no active filling order. Ignoring.")
         return
 
     await check_lost_state(message, None)
@@ -686,19 +691,41 @@ async def check_lost_state(message, state):
     filling_id = database.get_active_order_id(message.from_user.id)
 
     if filling_id:
-        if state:
-            data = await state.get_data()
-            if 'current_step' not in data:
-                await state.update_data(order_id=filling_id, photo_ids=[], current_step=0)
-                await state.set_state(OrderForm.survey)
-                await ask_step(message, state, 0)
-                return
-            await process_survey_message(message, state)
-        else:
+        if not state:
             state = FSMContext(storage=dp.storage, key=types.StorageKey(bot.id, message.chat.id, message.from_user.id))
-            await state.update_data(order_id=filling_id, photo_ids=[], current_step=0)
+        
+        data = await state.get_data()
+        # Если статус в базе есть, а в памяти бота (FSM) нет — восстанавливаем
+        if 'order_id' not in data or data['order_id'] != filling_id:
+            logging.info(f"Recovering FSM state for user {message.from_user.id}, order {filling_id}")
+            
+            # Пытаемся понять на каком мы шаге по заполненным данным в БД
+            order = database.get_order(filling_id)
+            order_data = order.get('order_data') or {}
+            flow = await get_survey_flow()
+            
+            current_step = 0
+            for i, step in enumerate(flow):
+                if step['id'] not in order_data:
+                    current_step = i
+                    break
+                # Если это последний шаг и он заполнен
+                if i == len(flow) - 1:
+                    current_step = len(flow)
+            
+            await state.update_data(order_id=filling_id, photo_ids=[], current_step=current_step)
             await state.set_state(OrderForm.survey)
-            await ask_step(message, state, 0)
+            
+            if current_step >= len(flow):
+                await finalize_order(message, filling_id, "")
+                await state.clear()
+                return
+            
+            # Переспрашиваем текущий шаг
+            await ask_step(message, state, current_step)
+            return
+            
+        await process_survey_message(message, state)
         return
 
     order_id = database.get_user_last_active_order(message.from_user.id)
