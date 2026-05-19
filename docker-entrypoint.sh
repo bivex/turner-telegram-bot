@@ -35,10 +35,8 @@ EOL
 
 if [ "$WAIT_FOR_DB" = "true" ]; then
     echo "Ожидание доступности БД..."
-    until python3 -c "
+    until python3 - <<END_PYTHON
 import pymysql, os, time
-from dotenv import load_dotenv
-load_dotenv()
 
 for i in range(30):
     try:
@@ -56,18 +54,16 @@ for i in range(30):
         if i == 29:
             raise
         time.sleep(2)
-" 2>/dev/null; do
+END_PYTHON
+    do
         sleep 2
     done
 fi
 
 echo "Проверка/инициализация таблиц БД..."
-python3 -c "
+python3 - <<END_PYTHON
 import pymysql
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 try:
     conn = pymysql.connect(
@@ -79,8 +75,8 @@ try:
     )
     
     with conn.cursor() as cursor:
-        # Проверяем существование таблиц
-        cursor.execute(\"SHOW TABLES LIKE 'users'\")
+        # Проверяем существование таблицы заказов
+        cursor.execute("SHOW TABLES LIKE 'orders'")
         if not cursor.fetchone():
             print('Создаем таблицы из schema.sql...')
             with open('schema.sql', 'r', encoding='utf-8') as f:
@@ -92,13 +88,20 @@ try:
             conn.commit()
             print('✅ Таблицы успешно созданы!')
         else:
-            print('✅ Таблицы уже существуют, пропускаем создание.')
+            print('✅ Таблицы уже существуют.')
+            # Проверяем наличие колонки order_data
+            cursor.execute("SHOW COLUMNS FROM orders LIKE 'order_data'")
+            if not cursor.fetchone():
+                print('➕ Добавляем колонку order_data...')
+                cursor.execute("ALTER TABLE orders ADD COLUMN order_data JSON DEFAULT NULL")
+                conn.commit()
+                print('✅ Колонка order_data добавлена!')
     
     conn.close()
 except Exception as e:
     print(f'⚠️  Ошибка БД: {e}')
     print('Продолжаем запуск...')
-"
+END_PYTHON
 
 echo "Запуск бота..."
 exec "$@"
