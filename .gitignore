@@ -14,3 +14,4 @@ __pycache__/
 .idea/
 .vscode/
 /frontend/node_modules
+quali_report.json

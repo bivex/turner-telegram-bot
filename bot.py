@@ -8,7 +8,10 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
+from aiogram.types import (
+    ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, 
+    InlineKeyboardButton, InputMediaPhoto, InputMediaDocument
+)
 
 import config
 import database
@@ -110,7 +113,11 @@ async def forward_message_to_admin(message: types.Message, order_id):
                 await bot.send_message(admin_id, header + message.text, parse_mode="HTML")
             else:
                 await message.copy_to(admin_id)
-                await bot.send_message(admin_id, i18n.t('msg_refers_to_order', al, order_id=order_id), parse_mode="HTML")
+                await bot.send_message(
+                    admin_id, 
+                    i18n.t('msg_refers_to_order', al, order_id=order_id), 
+                    parse_mode="HTML"
+                )
         else:
             lang = _lang(message.from_user.id)
             await message.answer(i18n.t('err_admin_not_set', lang))
@@ -193,7 +200,10 @@ async def cb_lang(callback: types.CallbackQuery):
     for code, label in i18n.SUPPORTED_LANGUAGES.items():
         prefix = '✅ ' if code == lang else ''
         buttons.append([InlineKeyboardButton(text=f"{prefix}{label}", callback_data=f"lang_{code}")])
-    await callback.message.edit_text(i18n.t('lang_select_prompt', lang), reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await callback.message.edit_text(
+        i18n.t('lang_select_prompt', lang), 
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
+    )
     await callback.answer()
 
 @dp.message(Command("cancel"))
@@ -210,7 +220,10 @@ async def cmd_lang(message: types.Message):
     for code, label in i18n.SUPPORTED_LANGUAGES.items():
         prefix = '✅ ' if code == lang else ''
         buttons.append([InlineKeyboardButton(text=f"{prefix}{label}", callback_data=f"lang_{code}")])
-    await message.answer(i18n.t('lang_select_prompt', lang), reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await message.answer(
+        i18n.t('lang_select_prompt', lang), 
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
+    )
 
 @dp.callback_query(F.data.startswith("lang_"))
 async def process_lang(callback: types.CallbackQuery):
@@ -268,7 +281,10 @@ async def process_survey_message(message: types.Message, state: FSMContext):
             else:
                 p_ids.append(f"d:{message.document.file_id}")
             await state.update_data(photo_ids=p_ids)
-            await message.answer(i18n.t('msg_photo_accepted_count', lang, count=len(p_ids)), reply_markup=kb_photo_step_dynamic(lang, step))
+            await message.answer(
+                i18n.t('msg_photo_accepted_count', lang, count=len(p_ids)), 
+                reply_markup=kb_photo_step_dynamic(lang, step)
+            )
             return
 
         txt = safe_text(message, lang)
@@ -383,7 +399,11 @@ async def admin_reply_handler(message: types.Message):
 
         try:
             if message.text:
-                await bot.send_message(order['user_id'], i18n.t('msg_from_master', lang, text=message.text), parse_mode="HTML")
+                await bot.send_message(
+                    order['user_id'], 
+                    i18n.t('msg_from_master', lang, text=message.text), 
+                    parse_mode="HTML"
+                )
             else:
                 await message.copy_to(order['user_id'])
             await message.react([types.ReactionTypeEmoji(emoji="👍")])

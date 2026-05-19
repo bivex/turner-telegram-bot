@@ -10,6 +10,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from main import app
 from routers.auth import verify_token
 
+TEST_USER_ID = 123
+
 class TestOrdersAPI(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
@@ -25,7 +27,7 @@ class TestOrdersAPI(unittest.TestCase):
         mock_get_orders.return_value = [
             {
                 "id": 1,
-                "user_id": 123,
+                "user_id": TEST_USER_ID,
                 "username": "testuser",
                 "full_name": "Test User",
                 "status": "new",
@@ -49,9 +51,9 @@ class TestOrdersAPI(unittest.TestCase):
     @patch('database.get_order')
     @patch('database.update_order_field')
     @patch('routers.orders.send_status_update_notification')
-    def test_update_order_status(self, mock_notify, mock_update, mock_get_order):
+    def test_update_order_status(self, _mock_notify, mock_update, mock_get_order):
         # Setup mock
-        mock_get_order.return_value = {"id": 1, "user_id": 123, "status": "new"}
+        mock_get_order.return_value = {"id": 1, "user_id": TEST_USER_ID, "status": "new"}
         
         # Execute
         response = self.client.put("/api/orders/1", json={"status": "approved"})

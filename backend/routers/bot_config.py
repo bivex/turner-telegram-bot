@@ -11,7 +11,7 @@ class BotConfigUpdate(BaseModel):
     value: str
 
 @router.get("/")
-async def get_bot_config(payload: dict = Depends(verify_token)) -> Dict[str, Any]:
+async def get_bot_config(_payload: dict = Depends(verify_token)) -> Dict[str, Any]:
     """Получить все настройки бота"""
     try:
         config = database.get_bot_config()
@@ -22,7 +22,7 @@ async def get_bot_config(payload: dict = Depends(verify_token)) -> Dict[str, Any
 @router.put("/")
 async def update_bot_config(
     config_update: BotConfigUpdate,
-    payload: dict = Depends(verify_token)
+    _payload: dict = Depends(verify_token)
 ):
     """Обновить настройку бота"""
     try:
@@ -37,7 +37,7 @@ async def update_bot_config(
         raise HTTPException(status_code=500, detail=f"Ошибка обновления настройки: {str(e)}")
 
 @router.get("/settings")
-async def get_bot_settings(payload: dict = Depends(verify_token)) -> Dict[str, Any]:
+async def get_bot_settings(_payload: dict = Depends(verify_token)) -> Dict[str, Any]:
     """Получить системные настройки бота"""
     try:
         config = database.get_bot_config()
@@ -53,7 +53,7 @@ async def get_bot_settings(payload: dict = Depends(verify_token)) -> Dict[str, A
 @router.put("/settings")
 async def update_bot_settings(
     settings: Dict[str, Any],
-    payload: dict = Depends(verify_token)
+    _payload: dict = Depends(verify_token)
 ):
     """Обновить системные настройки бота"""
     try:
@@ -67,7 +67,7 @@ async def update_bot_settings(
         raise HTTPException(status_code=500, detail=f"Ошибка обновления настроек: {str(e)}")
 
 @router.get("/flow")
-async def get_survey_flow(payload: dict = Depends(verify_token)) -> List[Dict[str, Any]]:
+async def get_survey_flow(_payload: dict = Depends(verify_token)) -> List[Dict[str, Any]]:
     """Получить структуру опроса (JSON)"""
     try:
         import json
@@ -82,7 +82,7 @@ async def get_survey_flow(payload: dict = Depends(verify_token)) -> List[Dict[st
 @router.put("/flow")
 async def update_survey_flow(
     flow: List[Dict[str, Any]],
-    payload: dict = Depends(verify_token)
+    _payload: dict = Depends(verify_token)
 ):
     """Обновить структуру опроса"""
     try:

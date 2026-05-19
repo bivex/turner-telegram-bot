@@ -30,7 +30,10 @@ def update_setting(key, val):
 def create_order(user_id, username, full_name):
     conn = get_connection()
     with conn.cursor() as cur:
-        cur.execute("INSERT INTO orders (user_id, username, full_name, status) VALUES (%s, %s, %s, 'filling')", (user_id, username, full_name))
+        cur.execute(
+            "INSERT INTO orders (user_id, username, full_name, status) VALUES (%s, %s, %s, 'filling')", 
+            (user_id, username, full_name)
+        )
         oid = cur.lastrowid
     conn.close()
     return oid
@@ -50,7 +53,10 @@ def update_order_data_json(oid, key, val):
         if current_data is None:
             cur.execute("UPDATE orders SET order_data = JSON_OBJECT(%s, %s) WHERE id=%s", (key, val, oid))
         else:
-            cur.execute("UPDATE orders SET order_data = JSON_SET(order_data, %s, %s) WHERE id=%s", (f"$.{key}", val, oid))
+            cur.execute(
+                "UPDATE orders SET order_data = JSON_SET(order_data, %s, %s) WHERE id=%s", 
+                (f"$.{key}", val, oid)
+            )
     conn.close()
 
 def finish_order_creation(oid):
@@ -91,7 +97,11 @@ def get_active_order_id(user_id):
 def get_user_last_active_order(user_id):
     conn = get_connection()
     with conn.cursor() as cur:
-        cur.execute("SELECT id FROM orders WHERE user_id=%s AND status IN ('new','discussion','approved','work') ORDER BY id DESC LIMIT 1", (user_id,))
+        cur.execute(
+            "SELECT id FROM orders WHERE user_id=%s AND status IN "
+            "('new','discussion','approved','work') ORDER BY id DESC LIMIT 1", 
+            (user_id,)
+        )
         res = cur.fetchone()
     conn.close()
     return res['id'] if res else None

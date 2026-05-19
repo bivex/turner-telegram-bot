@@ -38,7 +38,7 @@ async def get_orders(
     page: int = 1,
     limit: int = DEFAULT_PAGE_LIMIT,
     status_filter: Optional[str] = None,
-    payload: dict = Depends(verify_token)
+    _payload: dict = Depends(verify_token)
 ):
     """Получить список заказов с пагинацией"""
     try:
@@ -49,7 +49,7 @@ async def get_orders(
         raise HTTPException(status_code=500, detail=f"Ошибка получения заказов: {str(e)}")
 
 @router.get("/stats", response_model=OrderStats)
-async def get_order_stats(payload: dict = Depends(verify_token)):
+async def get_order_stats(_payload: dict = Depends(verify_token)):
     """Получить статистику заказов"""
     try:
         stats = database.get_order_statistics()
@@ -58,7 +58,7 @@ async def get_order_stats(payload: dict = Depends(verify_token)):
         raise HTTPException(status_code=500, detail=f"Ошибка получения статистики: {str(e)}")
 
 @router.get("/{order_id}", response_model=OrderBase)
-async def get_order(order_id: int, payload: dict = Depends(verify_token)):
+async def get_order(order_id: int, _payload: dict = Depends(verify_token)):
     """Получить заказ по ID"""
     try:
         order = database.get_order(order_id)
@@ -74,7 +74,7 @@ async def get_order(order_id: int, payload: dict = Depends(verify_token)):
 async def update_order(
     order_id: int,
     order_update: OrderUpdate,
-    payload: dict = Depends(verify_token)
+    _payload: dict = Depends(verify_token)
 ):
     """Обновить заказ"""
     try:
@@ -133,7 +133,7 @@ async def send_status_update_notification(user_id: int, order_id: int, new_statu
             print(f"Failed to send Telegram notification: {e}")
 
 @router.get("/{order_id}/photos")
-async def get_order_photos(order_id: int, payload: dict = Depends(verify_token)):
+async def get_order_photos(order_id: int, _payload: dict = Depends(verify_token)):
     """Получить рабочие ссылки на фото заказа"""
     try:
         order = database.get_order(order_id)
