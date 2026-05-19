@@ -94,7 +94,7 @@ def kb_photo_step_dynamic(lang, step):
     is_required = get_config_bool(step.get('required_key')) if step.get('required_key') else False
     if not is_required:
         buttons.append([KeyboardButton(text=i18n.t('btn_skip_photo', lang))])
-    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True, one_time_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
 def get_config_bool(key):
     cfg = database.get_bot_config()
@@ -150,7 +150,7 @@ def kb_main_menu(lang):
         resize_keyboard=True
     )
 
-def kb_photo_step_dynamic(lang, step):
+def kb_work_type(lang):
     buttons = [
         [InlineKeyboardButton(text=i18n.t('btn_type_repair', lang), callback_data="type_repair")],
         [InlineKeyboardButton(text=i18n.t('btn_type_copy', lang), callback_data="type_copy")],
