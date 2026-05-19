@@ -62,15 +62,6 @@
 *   `backend/` — API для админ-панели (FastAPI).
 *   `frontend/` — CRM-панель (React + Ant Design).
 *   `locales/` — Файлы локализации.
-*   `admin.php` — Устаревшая PHP-админка (legacy).
-
----
-
-## 🛠 Установка без Docker (Legacy)
-
-1. Настройте MySQL базу данных.
-2. Запустите `./install.sh` и следуйте инструкциям.
-3. Для PHP-админки скопируйте `admin.php` и `php_config.php` в корень веб-сервера.
 
 ---
 
