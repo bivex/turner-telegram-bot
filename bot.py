@@ -229,7 +229,7 @@ async def process_work_type(callback: types.CallbackQuery, state: FSMContext):
     key = map_types.get(callback.data)
     human = i18n.t(key, lang)
 
-    database.update_order_field((await state.get_data())['order_id'], 'work_type', human)
+    database.update_order_data_json((await state.get_data())['order_id'], 'work_type', human)
 
     await callback.message.edit_text(i18n.t('label_chosen', lang, human=human))
     await callback.message.answer(i18n.t('step_dim_text', lang), parse_mode="Markdown")
@@ -240,7 +240,7 @@ async def process_work_type(callback: types.CallbackQuery, state: FSMContext):
 async def process_dimensions(message: types.Message, state: FSMContext):
     lang = _lang(message.from_user.id)
     txt = safe_text(message, lang)
-    database.update_order_field((await state.get_data())['order_id'], 'dimensions_info', txt)
+    database.update_order_data_json((await state.get_data())['order_id'], 'dimensions', txt)
 
     btns = [
         [InlineKeyboardButton(text=i18n.t('btn_cond_rotation', lang), callback_data="cond_rotation")],
@@ -258,7 +258,7 @@ async def process_conditions(callback: types.CallbackQuery, state: FSMContext):
     map_cond = {'cond_rotation': 'btn_cond_rotation', 'cond_static': 'btn_cond_static', 'cond_impact': 'btn_cond_impact', 'cond_unknown': 'btn_cond_unknown'}
     human = i18n.t(map_cond.get(callback.data), lang)
 
-    database.update_order_field((await state.get_data())['order_id'], 'conditions', human)
+    database.update_order_data_json((await state.get_data())['order_id'], 'conditions', human)
 
     await callback.message.edit_text(i18n.t('label_chosen', lang, human=human))
     await callback.message.answer(i18n.t('step_urgency_text', lang), reply_markup=kb_urgency(lang), parse_mode="Markdown")
@@ -271,7 +271,7 @@ async def process_urgency(callback: types.CallbackQuery, state: FSMContext):
     map_urg = {'urgency_high': 'btn_urgency_high', 'urgency_med': 'btn_urgency_med', 'urgency_low': 'btn_urgency_low'}
     human = i18n.t(map_urg.get(callback.data), lang)
 
-    database.update_order_field((await state.get_data())['order_id'], 'urgency', human)
+    database.update_order_data_json((await state.get_data())['order_id'], 'urgency', human)
     await callback.message.edit_text(i18n.t('label_chosen', lang, human=human))
 
     if get_config_bool('step_extra_enabled'):
@@ -304,7 +304,7 @@ async def process_comment(message: types.Message, state: FSMContext):
 
 async def finalize_order(message, order_id, comment_text):
     lang = _lang(message.from_user.id)
-    database.update_order_field(order_id, 'comment', comment_text)
+    database.update_order_data_json(order_id, 'comment', comment_text)
     database.finish_order_creation(order_id)
     await message.answer(i18n.t('msg_done', lang), parse_mode="Markdown")
     await notify_admin(order_id)
@@ -316,15 +316,24 @@ async def notify_admin(order_id):
 
     al = _admin_lang()
     order = database.get_order(order_id)
+    
+    # Извлекаем данные из JSON
+    import json
+    data = order.get('order_data')
+    if isinstance(data, str):
+        data = json.loads(data)
+    elif data is None:
+        data = {}
+
     text = i18n.t('msg_new_order_admin', al,
         order_id=order['id'],
         full_name=order['full_name'],
         username=order['username'],
-        work_type=order['work_type'] or '',
-        dimensions=order['dimensions_info'] or '',
-        conditions=order['conditions'] or '',
-        urgency=order['urgency'] or '',
-        comment=order['comment'] or ''
+        work_type=data.get('work_type', ''),
+        dimensions=data.get('dimensions', ''),
+        conditions=data.get('conditions', ''),
+        urgency=data.get('urgency', ''),
+        comment=data.get('comment', '')
     )
     try:
         raw_ids = order['photo_file_id'].split(',') if order['photo_file_id'] else []
@@ -411,6 +420,14 @@ async def check_lost_state(message, state):
         order = database.get_order(filling_id)
         has_photos = order['photo_file_id'] is not None and len(str(order['photo_file_id'])) > 5
 
+        # Извлекаем данные из JSON
+        import json
+        data = order.get('order_data')
+        if isinstance(data, str):
+            data = json.loads(data)
+        elif data is None:
+            data = {}
+
         if not has_photos:
             if message.photo or (message.document and message.document.mime_type.startswith('image/')):
                 if state: await state.set_state(OrderForm.photo)
@@ -427,13 +444,13 @@ async def check_lost_state(message, state):
             await process_photo_done(message, state or FSMContext(storage=dp.storage, key=types.StorageKey(bot.id, message.chat.id, message.from_user.id)))
             return
 
-        if not order['work_type']:
+        if not data.get('work_type'):
             await message.answer(i18n.t('msg_restoring_type', lang), reply_markup=kb_work_type(lang))
             if state: await state.set_state(OrderForm.work_type)
             return
 
-        if not order['dimensions_info']:
-            database.update_order_field(filling_id, 'dimensions_info', safe_text(message, lang))
+        if not data.get('dimensions'):
+            database.update_order_data_json(filling_id, 'dimensions', safe_text(message, lang))
             btns = [[InlineKeyboardButton(text=i18n.t('btn_cond_rotation', lang), callback_data="cond_rotation")], [InlineKeyboardButton(text=i18n.t('btn_cond_static', lang), callback_data="cond_static")], [InlineKeyboardButton(text=i18n.t('btn_cond_unknown', lang), callback_data="cond_unknown")]]
             await message.answer(i18n.t('msg_dimensions_recorded', lang, dimensions=safe_text(message, lang)), reply_markup=InlineKeyboardMarkup(inline_keyboard=btns))
             if state: await state.set_state(OrderForm.conditions)

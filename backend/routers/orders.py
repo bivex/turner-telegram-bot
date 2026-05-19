@@ -17,11 +17,7 @@ class OrderBase(BaseModel):
     username: Optional[str]
     full_name: str
     status: str
-    work_type: Optional[str]
-    dimensions_info: Optional[str]
-    conditions: Optional[str]
-    urgency: Optional[str]
-    comment: Optional[str]
+    order_data: Optional[dict] = None
     photo_file_id: Optional[str]
     created_at: datetime
     internal_note: Optional[str]

@@ -131,23 +131,17 @@ const Orders = () => {
       ),
     },
     {
-      title: t('orders.col_work_type'),
-      dataIndex: 'work_type',
-      key: 'work_type',
-      render: (text) => text || '-',
-    },
-    {
-      title: t('orders.col_urgency'),
-      dataIndex: 'urgency',
-      key: 'urgency',
-      render: (text) => {
-        const urgencyColors = {
-          'red': 'red',
-          'orange': 'orange',
-          'green': 'green'
-        };
-        return <Tag color={urgencyColors[text] || 'default'}>{text || '-'}</Tag>;
-      },
+      title: t('orders.col_details'),
+      key: 'details',
+      render: (_, record) => (
+        <div style={{ maxWidth: '300px', fontSize: '12px' }}>
+          {record.order_data ? (
+            Object.entries(record.order_data).slice(0, 3).map(([key, value]) => (
+              <div key={key}><strong>{key}:</strong> {value}</div>
+            ))
+          ) : '-'}
+        </div>
+      ),
     },
     {
       title: t('orders.col_status'),
@@ -286,17 +280,15 @@ const Orders = () => {
               </Col>
               <Col span={12}>
                 <h3>{t('orders.order_details')}</h3>
-                <p><strong>{t('orders.work_type')}</strong> {selectedOrder.work_type}</p>
-                <p><strong>{t('orders.dimensions')}</strong> {selectedOrder.dimensions_info}</p>
-                <p><strong>{t('orders.conditions')}</strong> {selectedOrder.conditions}</p>
-                <p><strong>{t('orders.urgency')}</strong> {selectedOrder.urgency}</p>
+                {selectedOrder.order_data ? (
+                  Object.entries(selectedOrder.order_data).map(([key, value]) => (
+                    <p key={key}><strong>{key}:</strong> {value}</p>
+                  ))
+                ) : (
+                  <p>{t('orders.no_details')}</p>
+                )}
               </Col>
             </Row>
-
-            <div style={{ marginTop: 16 }}>
-              <h3>{t('orders.comment')}</h3>
-              <p>{selectedOrder.comment || t('orders.no_comment')}</p>
-            </div>
 
             {photos.length > 0 && (
               <div style={{ marginTop: 16 }}>

@@ -39,6 +39,19 @@ def update_order_field(oid, field, val):
     with conn.cursor() as cur: cur.execute(f"UPDATE orders SET {field}=%s WHERE id=%s", (val, oid))
     conn.close()
 
+def update_order_data_json(oid, key, val):
+    """Обновляет значение в JSON-поле order_data"""
+    conn = get_connection()
+    with conn.cursor() as cur:
+        # Проверяем, не пустой ли JSON
+        cur.execute("SELECT order_data FROM orders WHERE id=%s", (oid,))
+        current_data = cur.fetchone()['order_data']
+        if current_data is None:
+            cur.execute("UPDATE orders SET order_data = JSON_OBJECT(%s, %s) WHERE id=%s", (key, val, oid))
+        else:
+            cur.execute("UPDATE orders SET order_data = JSON_SET(order_data, %s, %s) WHERE id=%s", (f"$.{key}", val, oid))
+    conn.close()
+
 def finish_order_creation(oid):
     conn = get_connection()
     with conn.cursor() as cur: cur.execute("UPDATE orders SET status='new' WHERE id=%s", (oid,))
