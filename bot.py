@@ -52,8 +52,12 @@ async def ask_step(message: types.Message, state: FSMContext, step_index: int = 
     step = flow[step_index]
     lang = _lang(message.from_user.id)
     
-    # Получаем текст вопроса (либо из перевода, либо напрямую)
-    text = i18n.t(step.get('label_key'), lang) if step.get('label_key') else step.get('label', '...')
+    # Priority: 1. Custom label from Visual Builder 2. Translation key 3. Fallback
+    text = step.get('label')
+    if not text and step.get('label_key'):
+        text = i18n.t(step.get('label_key'), lang)
+    if not text:
+        text = '...'
     
     kb = None
     if step['type'] == 'photo':
@@ -61,53 +65,12 @@ async def ask_step(message: types.Message, state: FSMContext, step_index: int = 
     elif step['type'] == 'choice':
         btns = []
         for opt in step.get('options', []):
-            opt_text = i18n.t(opt.get('label_key'), lang) if opt.get('label_key') else opt.get('label', opt['val'])
-            btns.append([InlineKeyboardButton(text=opt_text, callback_data=f"flow_val:{opt['val']}")])
-        kb = InlineKeyboardMarkup(inline_keyboard=btns)
-
-    await state.update_data(current_step=step_index)
-    
-    if kb:
-        await message.answer(text, reply_markup=kb, parse_mode="Markdown")
-    else:
-        await message.answer(text, reply_markup=types.ReplyKeyboardRemove(), parse_mode="Markdown")
-
-def kb_photo_step_dynamic(lang, step):
-    buttons = [[KeyboardButton(text=i18n.t('btn_photos_done', lang))]]
-    is_required = get_config_bool(step.get('required_key')) if step.get('required_key') else False
-    if not is_required:
-        buttons.append([KeyboardButton(text=i18n.t('btn_skip_photo', lang))])
-    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True, one_time_keyboard=True)
-
-
-async def get_survey_flow():
-    cfg = database.get_bot_config()
-    flow_raw = cfg.get('survey_flow', '[]')
-    if isinstance(flow_raw, str):
-        import json
-        return json.loads(flow_raw)
-    return flow_raw
-
-async def ask_step(message: types.Message, state: FSMContext, step_index: int = 0):
-    flow = await get_survey_flow()
-    if step_index >= len(flow):
-        data = await state.get_data()
-        await finalize_order(message, data['order_id'], "")
-        await state.clear()
-        return
-
-    step = flow[step_index]
-    lang = _lang(message.from_user.id)
-    
-    text = i18n.t(step.get('label_key'), lang) if step.get('label_key') else step.get('label', '...')
-    
-    kb = None
-    if step['type'] == 'photo':
-        kb = kb_photo_step_dynamic(lang, step)
-    elif step['type'] == 'choice':
-        btns = []
-        for opt in step.get('options', []):
-            opt_text = i18n.t(opt.get('label_key'), lang) if opt.get('label_key') else opt.get('label', opt['val'])
+            opt_text = opt.get('label')
+            if not opt_text and opt.get('label_key'):
+                opt_text = i18n.t(opt.get('label_key'), lang)
+            if not opt_text:
+                opt_text = opt.get('val')
+                
             btns.append([InlineKeyboardButton(text=opt_text, callback_data=f"flow_val:{opt['val']}")])
         kb = InlineKeyboardMarkup(inline_keyboard=btns)
 
@@ -271,7 +234,11 @@ async def process_choice(callback: types.CallbackQuery, state: FSMContext):
     human = val
     for opt in step.get('options', []):
         if opt['val'] == val:
-            human = i18n.t(opt.get('label_key'), lang) if opt.get('label_key') else opt.get('label', val)
+            human = opt.get('label')
+            if not human and opt.get('label_key'):
+                human = i18n.t(opt.get('label_key'), lang)
+            if not human:
+                human = val
             break
 
     database.update_order_data_json(data['order_id'], step['id'], human)

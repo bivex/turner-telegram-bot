@@ -36,9 +36,13 @@ const BotConfig = () => {
       }
       
       if (flowResponse.data) {
-          flowForm.setFieldsValue({
-              steps: flowResponse.data
-          });
+          console.log("Flow Data Received:", flowResponse.data);
+          // Используем setTimeout чтобы обойти возможные race conditions при рендере вкладок
+          setTimeout(() => {
+              flowForm.setFieldsValue({
+                  steps: Array.isArray(flowResponse.data) ? flowResponse.data : []
+              });
+          }, 100);
       }
     } catch (error) {
       message.error(t('bot_config.err_load'));
