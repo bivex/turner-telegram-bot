@@ -410,8 +410,8 @@ async def admin_reply_handler(message: types.Message):
         try:
             if message.text:
                 await bot.send_message(
-                    order['user_id'], 
-                    i18n.t('msg_from_master', lang, text=message.text), 
+                    order['user_id'],
+                    i18n.t('msg_from_master', lang, text=message.text),
                     parse_mode="HTML"
                 )
             else:
@@ -421,6 +421,68 @@ async def admin_reply_handler(message: types.Message):
             await message.answer(i18n.t('err_send_failed', lang, error=e))
     except Exception as e:
         await message.answer(i18n.t('msg_fatal_error', lang, error=e))
+
+# --- TEMPLATES IN BOT ---
+@dp.message(Command("templates"))
+async def cmd_templates(message: types.Message):
+    if not database.is_admin(message.chat.id): return
+    templates = database.get_templates()
+    if not templates:
+        await message.answer("📋 Нет сохранённых шаблонов.")
+        return
+    rows = []
+    for tpl in templates:
+        rows.append([InlineKeyboardButton(
+            text=tpl['name'],
+            callback_data=f"tpl_show:{tpl['id']}"
+        )])
+    await message.answer("📋 Шаблоны:", reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
+
+@dp.callback_query(F.data.startswith("tpl_show:"))
+async def cb_tpl_show(callback: types.CallbackQuery):
+    if not database.is_admin(callback.from_user.id):
+        await callback.answer("⛔", show_alert=True)
+        return
+    tid = int(callback.data.split(":")[1])
+    tpl = database.get_template(tid)
+    if not tpl:
+        await callback.answer("Шаблон не найден", show_alert=True)
+        return
+    await callback.message.answer(
+        f"📋 <b>{tpl['name']}</b>\n\n{tpl['body']}\n\n"
+        f"↩️ Reply на сообщение клиента + /sendtpl {tid} <code>номер_заказа</code>",
+        parse_mode="HTML"
+    )
+    await callback.answer()
+
+@dp.message(Command("sendtpl"))
+async def cmd_send_template(message: types.Message):
+    if not database.is_admin(message.chat.id): return
+    lang = _lang(message.from_user.id)
+    args = message.text.split()
+    if len(args) < 3:
+        await message.answer("Формат: /sendtpl template_id order_id")
+        return
+    try:
+        tid, oid = int(args[1]), int(args[2])
+    except ValueError:
+        await message.answer("⚠️ Неверные ID. Формат: /sendtpl template_id order_id")
+        return
+
+    tpl = database.get_template(tid)
+    if not tpl:
+        await message.answer("Шаблон не найден")
+        return
+    order = database.get_order(oid)
+    if not order:
+        await message.answer(i18n.t('err_order_not_found', lang, order_id=oid))
+        return
+
+    try:
+        await bot.send_message(order['user_id'], i18n.t('msg_from_master', lang, text=tpl['body']), parse_mode="HTML")
+        await message.react([types.ReactionTypeEmoji(emoji="👍")])
+    except Exception as e:
+        await message.answer(i18n.t('err_send_failed', lang, error=e))
 
 # --- MY ORDERS ---
 MYORDERS_PER_PAGE = 5

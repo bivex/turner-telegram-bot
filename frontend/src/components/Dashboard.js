@@ -17,8 +17,8 @@ const Dashboard = () => {
     active_orders: 0
   });
   const [analyticsQuick, setAnalyticsQuick] = useState({
-    total_revenue: 0,
-    average_order_value: 0
+    revenue: 0,
+    avg_check: 0
   });
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -41,8 +41,8 @@ const Dashboard = () => {
     try {
       const response = await axios.get('/api/orders/analytics');
       setAnalyticsQuick({
-        total_revenue: response.data.total_revenue || 0,
-        average_order_value: response.data.average_order_value || 0
+        revenue: response.data.revenue || 0,
+        avg_check: response.data.avg_check || 0
       });
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -77,7 +77,7 @@ const Dashboard = () => {
           <Card>
             <Statistic
               title={t('analytics.revenue')}
-              value={analyticsQuick.total_revenue}
+              value={analyticsQuick.revenue}
               precision={2}
               prefix={<DollarOutlined />}
               valueStyle={{ color: '#3f8600' }}
@@ -88,7 +88,7 @@ const Dashboard = () => {
           <Card>
             <Statistic
               title={t('analytics.avg_order')}
-              value={analyticsQuick.average_order_value}
+              value={analyticsQuick.avg_check}
               precision={2}
               prefix={<ShoppingCartOutlined />}
               valueStyle={{ color: '#1890ff' }}
