@@ -55,5 +55,15 @@
   "lang_changed": "✅ Язык изменен.",
   "lang_ru": "🇷🇺 Русский",
   "lang_en": "🇬🇧 English",
-  "lang_uk": "🇺🇦 Українська"
+  "lang_uk": "🇺🇦 Українська",
+  "btn_my_orders": "📋 Мои заказы",
+  "msg_no_orders_history": "У вас нет заказов.",
+  "msg_order_history_header": "📋 Ваши заказы:",
+  "msg_price_accepted": "✅ Вы приняли цену по заказу #{order_id}.",
+  "msg_price_rejected": "❌ Вы отказались от цены по заказу #{order_id}.",
+  "msg_price_accepted_admin": "✅ Клиент принял цену по заказу #{order_id}.",
+  "msg_price_rejected_admin": "❌ Клиент отказался от цены по заказу #{order_id}.",
+  "msg_deadline_reminder": "⏰ Напоминание: заказ #{order_id} будет готов к {deadline}!",
+  "msg_broadcast_sent": "📤 Рассылка отправлена: {count} доставлено, {failed} не доставлено.",
+  "msg_broadcast_prompt": "Отправьте текст сообщения для рассылки всем клиентам:"
 }

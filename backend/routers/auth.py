@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from jose import jwt, JWTError
-import datetime
+from datetime import datetime, timedelta, timezone
 import os
 from database import get_bot_config
 
@@ -19,7 +19,7 @@ TOKEN_EXPIRATION_HOURS = 24
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(hours=TOKEN_EXPIRATION_HOURS)
+    expire = datetime.now(timezone.utc) + timedelta(hours=TOKEN_EXPIRATION_HOURS)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

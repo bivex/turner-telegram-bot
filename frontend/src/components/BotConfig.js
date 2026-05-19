@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   Card, Form, Input, Button, Switch, message, Tabs, Space,
-  Divider, InputNumber, Alert, Select, Row, Col
+  Divider, InputNumber, Alert, Select, Row, Col, Table, Tag,
+  List, Popconfirm
 } from 'antd';
-import { SaveOutlined, ReloadOutlined, PlusOutlined, MinusCircleOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
+import { SaveOutlined, ReloadOutlined, PlusOutlined, MinusCircleOutlined, ArrowUpOutlined, ArrowDownOutlined, SendOutlined, UserAddOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 
@@ -14,15 +15,20 @@ const BotConfig = () => {
   const [settingsForm] = Form.useForm();
   const [flowForm] = Form.useForm();
   const { t } = useTranslation();
+  const [admins, setAdmins] = useState([]);
+  const [adminChatId, setAdminChatId] = useState('');
+  const [broadcastText, setBroadcastText] = useState('');
+  const [broadcastSending, setBroadcastSending] = useState(false);
 
   const requiredRule = [{ required: true, message: t('required_field') }];
 
   const loadConfig = React.useCallback(async () => {
     setLoading(true);
     try {
-      const [settingsResponse, flowResponse] = await Promise.all([
+      const [settingsResponse, flowResponse, adminsResponse] = await Promise.all([
         axios.get('/api/bot-config/settings'),
-        axios.get('/api/bot-config/flow')
+        axios.get('/api/bot-config/flow'),
+        axios.get('/api/bot-config/admins').catch(() => ({ data: [] }))
       ]);
 
       if (settingsResponse.data) {
@@ -34,7 +40,7 @@ const BotConfig = () => {
         });
         settingsForm.setFieldsValue(normalizedSettings);
       }
-      
+
       if (flowResponse.data) {
           console.log("Flow Data Received:", flowResponse.data);
           // Используем setTimeout чтобы обойти возможные race conditions при рендере вкладок
@@ -43,6 +49,10 @@ const BotConfig = () => {
                   steps: Array.isArray(flowResponse.data) ? flowResponse.data : []
               });
           }, 100);
+      }
+
+      if (adminsResponse.data) {
+        setAdmins(Array.isArray(adminsResponse.data) ? adminsResponse.data : []);
       }
     } catch (error) {
       message.error(t('bot_config.err_load'));
@@ -77,6 +87,48 @@ const BotConfig = () => {
       } finally {
           setLoading(false);
       }
+  };
+
+  const handleAddAdmin = async () => {
+    if (!adminChatId.trim()) {
+      message.error('Please enter a chat ID');
+      return;
+    }
+    try {
+      await axios.post('/api/bot-config/admins', { chat_id: adminChatId });
+      message.success('Admin added');
+      setAdminChatId('');
+      loadConfig();
+    } catch (error) {
+      message.error('Error adding admin');
+    }
+  };
+
+  const handleRemoveAdmin = async (chatId) => {
+    try {
+      await axios.delete(`/api/bot-config/admins/${chatId}`);
+      message.success('Admin removed');
+      loadConfig();
+    } catch (error) {
+      message.error('Error removing admin');
+    }
+  };
+
+  const handleBroadcast = async () => {
+    if (!broadcastText.trim()) {
+      message.error('Please enter a message');
+      return;
+    }
+    setBroadcastSending(true);
+    try {
+      await axios.post('/api/bot-config/broadcast', { text: broadcastText });
+      message.success('Broadcast sent');
+      setBroadcastText('');
+    } catch (error) {
+      message.error('Error sending broadcast');
+    } finally {
+      setBroadcastSending(false);
+    }
   };
 
   const tabItems = [
@@ -249,6 +301,60 @@ const BotConfig = () => {
               showIcon
               style={{ marginBottom: 16 }}
             />
+
+            <Divider>Admins</Divider>
+
+            <Card size="small" title="Current Admins" style={{ marginBottom: 16 }}>
+              <Space style={{ width: '100%', marginBottom: 12 }} wrap>
+                {admins.length === 0 && <Tag>No admins configured</Tag>}
+                {admins.map((admin) => (
+                  <Tag
+                    key={admin.chat_id || admin}
+                    closable
+                    onClose={() => handleRemoveAdmin(admin.chat_id || admin)}
+                  >
+                    {admin.username ? `@${admin.username}` : (admin.chat_id || admin)}
+                  </Tag>
+                ))}
+              </Space>
+              <Space>
+                <Input
+                  placeholder="Chat ID"
+                  value={adminChatId}
+                  onChange={(e) => setAdminChatId(e.target.value)}
+                  style={{ width: 200 }}
+                  onPressEnter={handleAddAdmin}
+                />
+                <Button
+                  type="primary"
+                  icon={<UserAddOutlined />}
+                  onClick={handleAddAdmin}
+                >
+                  Add Admin
+                </Button>
+              </Space>
+            </Card>
+
+            <Divider>Broadcast</Divider>
+
+            <Card size="small" title="Send Broadcast Message">
+              <TextArea
+                rows={3}
+                placeholder="Enter broadcast message text..."
+                value={broadcastText}
+                onChange={(e) => setBroadcastText(e.target.value)}
+                style={{ marginBottom: 12 }}
+              />
+              <Button
+                type="primary"
+                icon={<SendOutlined />}
+                onClick={handleBroadcast}
+                loading={broadcastSending}
+                disabled={!broadcastText.trim()}
+              >
+                Send Broadcast
+              </Button>
+            </Card>
 
             <Form.Item style={{ textAlign: 'right' }}>
               <Space>

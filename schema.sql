@@ -19,6 +19,11 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `photo_file_id` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `internal_note` text DEFAULT NULL,
+  `price` decimal(12,2) DEFAULT NULL,
+  `price_currency` varchar(5) DEFAULT 'UAH',
+  `price_status` varchar(20) DEFAULT NULL,
+  `deadline` date DEFAULT NULL,
+  `completed_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -65,5 +70,42 @@ INSERT IGNORE INTO `bot_config` (`cfg_key`, `cfg_value`, `description`) VALUES
 CREATE TABLE IF NOT EXISTS `user_prefs` (
   `user_id` bigint(20) NOT NULL,
   `language` varchar(5) NOT NULL DEFAULT 'ru',
+  `phone` varchar(30) DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Таблица клиентов (CRM)
+CREATE TABLE IF NOT EXISTS `customers` (
+  `user_id` bigint(20) NOT NULL,
+  `username` varchar(100) DEFAULT NULL,
+  `full_name` varchar(255) DEFAULT NULL,
+  `phone` varchar(30) DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `total_orders` int DEFAULT 0,
+  `total_spent` decimal(12,2) DEFAULT 0.00,
+  `last_order_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`user_id`),
+  INDEX `idx_username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Таблица администраторов
+CREATE TABLE IF NOT EXISTS `admins` (
+  `chat_id` bigint(20) NOT NULL,
+  `username` varchar(100) DEFAULT NULL,
+  `full_name` varchar(255) DEFAULT NULL,
+  `role` varchar(20) DEFAULT 'admin',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`chat_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Таблица шаблонов ответов
+CREATE TABLE IF NOT EXISTS `templates` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `body` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

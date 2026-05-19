@@ -5,7 +5,10 @@ import {
     ShoppingCartOutlined,
     SettingOutlined,
     LogoutOutlined,
-    UserOutlined
+    UserOutlined,
+    TeamOutlined,
+    MessageOutlined,
+    BarChartOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -49,6 +52,21 @@ const MainLayout = () => {
             key: '/orders',
             icon: <ShoppingCartOutlined />,
             label: t('layout.orders'),
+        },
+        {
+            key: '/customers',
+            icon: <TeamOutlined />,
+            label: t('layout.customers'),
+        },
+        {
+            key: '/templates',
+            icon: <MessageOutlined />,
+            label: t('layout.templates'),
+        },
+        {
+            key: '/analytics',
+            icon: <BarChartOutlined />,
+            label: t('layout.analytics'),
         },
         {
             key: '/bot-config',

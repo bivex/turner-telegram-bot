@@ -9,9 +9,10 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (
-    ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, 
+    ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup,
     InlineKeyboardButton, InputMediaPhoto, InputMediaDocument
 )
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import config
 import database
@@ -24,6 +25,9 @@ dp = Dispatcher()
 
 class OrderForm(StatesGroup):
     survey = State()
+
+class BroadcastForm(StatesGroup):
+    waiting_message = State()
 
 # --- HELPERS ---
 def _lang(user_id: int) -> str:
@@ -104,23 +108,27 @@ def safe_text(message: types.Message, lang: str = 'ru'):
 
 async def forward_message_to_admin(message: types.Message, order_id):
     try:
-        cfg = database.get_bot_config()
-        admin_id = cfg.get("admin_chat_id", "0")
-        if admin_id and admin_id != '0':
-            al = _admin_lang()
-            header = i18n.t('msg_client_msg_header', al, order_id=order_id)
-            if message.text:
-                await bot.send_message(admin_id, header + message.text, parse_mode="HTML")
-            else:
-                await message.copy_to(admin_id)
-                await bot.send_message(
-                    admin_id, 
-                    i18n.t('msg_refers_to_order', al, order_id=order_id), 
-                    parse_mode="HTML"
-                )
-        else:
+        admins = database.get_all_admins()
+        if not admins:
             lang = _lang(message.from_user.id)
             await message.answer(i18n.t('err_admin_not_set', lang))
+            return
+
+        al = _admin_lang()
+        header = i18n.t('msg_client_msg_header', al, order_id=order_id)
+        for admin_id in admins:
+            try:
+                if message.text:
+                    await bot.send_message(admin_id, header + message.text, parse_mode="HTML")
+                else:
+                    await message.copy_to(admin_id)
+                    await bot.send_message(
+                        admin_id,
+                        i18n.t('msg_refers_to_order', al, order_id=order_id),
+                        parse_mode="HTML"
+                    )
+            except Exception as e:
+                logging.error(f"Deliver error to {admin_id}: {e}")
     except Exception as e:
         logging.error(f"Deliver error: {e}")
 
@@ -143,6 +151,7 @@ def kb_start_menu(lang):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=i18n.t('btn_new_order', lang), callback_data="start_new_order")],
         [InlineKeyboardButton(text=i18n.t('btn_cancel_order', lang), callback_data="start_cancel"),
+         InlineKeyboardButton(text=i18n.t('btn_my_orders', lang), callback_data="start_myorders"),
          InlineKeyboardButton(text=i18n.t('btn_lang', lang), callback_data="start_lang")],
     ])
 
@@ -314,13 +323,14 @@ async def finalize_order(message, order_id, comment_text):
     lang = _lang(message.from_user.id)
     database.update_order_data_json(order_id, 'comment', comment_text)
     database.finish_order_creation(order_id)
+    database.upsert_customer(message.from_user.id, message.from_user.username, message.from_user.full_name)
     await message.answer(i18n.t('msg_done', lang), parse_mode="Markdown")
     await notify_admin(order_id)
 
 async def notify_admin(order_id):
-    cfg = database.get_bot_config()
-    aid = cfg.get("admin_chat_id", "0")
-    if not aid or aid == '0': return
+    admins = database.get_all_admins()
+    if not admins:
+        return
 
     al = _admin_lang()
     order = database.get_order(order_id)
@@ -336,30 +346,31 @@ async def notify_admin(order_id):
         urgency=data.get('urgency', ''),
         comment=data.get('comment', '')
     )
-    try:
-        raw_ids = order['photo_file_id'].split(',') if order['photo_file_id'] else []
-        media = []
-        for rid in raw_ids:
-            if rid.startswith('p:'):
-                media.append(types.InputMediaPhoto(media=rid[2:]))
-            elif rid.startswith('d:'):
-                media.append(types.InputMediaDocument(media=rid[2:]))
-            else:
-                media.append(types.InputMediaPhoto(media=rid))
+    for admin_id in admins:
+        try:
+            raw_ids = order['photo_file_id'].split(',') if order['photo_file_id'] else []
+            media = []
+            for rid in raw_ids:
+                if rid.startswith('p:'):
+                    media.append(types.InputMediaPhoto(media=rid[2:]))
+                elif rid.startswith('d:'):
+                    media.append(types.InputMediaDocument(media=rid[2:]))
+                else:
+                    media.append(types.InputMediaPhoto(media=rid))
 
-        if len(media) > 1:
-            await bot.send_media_group(aid, media=media)
-            await bot.send_message(aid, text, parse_mode="HTML")
-        elif len(media) == 1:
-            m = media[0]
-            if isinstance(m, types.InputMediaPhoto):
-                await bot.send_photo(aid, m.media, caption=text, parse_mode="HTML")
+            if len(media) > 1:
+                await bot.send_media_group(admin_id, media=media)
+                await bot.send_message(admin_id, text, parse_mode="HTML")
+            elif len(media) == 1:
+                m = media[0]
+                if isinstance(m, types.InputMediaPhoto):
+                    await bot.send_photo(admin_id, m.media, caption=text, parse_mode="HTML")
+                else:
+                    await bot.send_document(admin_id, m.media, caption=text, parse_mode="HTML")
             else:
-                await bot.send_document(aid, m.media, caption=text, parse_mode="HTML")
-        else:
-            await bot.send_message(aid, text, parse_mode="HTML")
-    except Exception as e:
-        logging.error(f"Err admin: {e}")
+                await bot.send_message(admin_id, text, parse_mode="HTML")
+        except Exception as e:
+            logging.error(f"Err admin {admin_id}: {e}")
 
 # --- ADMIN ---
 @dp.message(Command("iamadmin"))
@@ -367,7 +378,7 @@ async def cmd_admin_auth(message: types.Message):
     lang = _lang(message.from_user.id)
     args = message.text.split()
     if len(args) > 1 and args[1] == config.BOT_ADMIN_PASSWORD:
-        database.update_bot_config("admin_chat_id", str(message.chat.id))
+        database.add_admin(message.chat.id, message.from_user.username, message.from_user.full_name, role='superadmin')
         await message.answer(i18n.t('msg_admin_authorized', lang))
     else:
         await message.answer(i18n.t('err_wrong_password', lang))
@@ -375,9 +386,7 @@ async def cmd_admin_auth(message: types.Message):
 @dp.message(F.reply_to_message)
 async def admin_reply_handler(message: types.Message):
     try:
-        cfg = database.get_bot_config()
-        aid = str(cfg.get("admin_chat_id", "0"))
-        if str(message.chat.id) != aid: return
+        if not database.is_admin(message.chat.id): return
 
         lang = _lang(message.from_user.id)
 
@@ -412,6 +421,123 @@ async def admin_reply_handler(message: types.Message):
     except Exception as e:
         await message.answer(i18n.t('msg_fatal_error', lang, error=e))
 
+# --- MY ORDERS ---
+@dp.message(Command("myorders"))
+async def cmd_my_orders(message: types.Message):
+    orders = database.get_user_orders(message.from_user.id, limit=5, offset=0)
+    lang = _lang(message.from_user.id)
+    if not orders:
+        await message.answer(i18n.t('msg_no_orders_history', lang))
+        return
+    text_lines = [i18n.t('msg_order_history_header', lang)]
+    for order in orders:
+        status_map = {
+            'filling': '📝', 'new': '🔥', 'discussion': '💬',
+            'approved': '🛠', 'work': '⚙️', 'done': '✅', 'rejected': '❌'
+        }
+        emoji = status_map.get(order['status'], '📦')
+        date = order['created_at'].strftime('%d.%m.%Y') if order.get('created_at') else ''
+        line = f"{emoji} #{order['id']} — {order['status']} — {date}"
+        if order.get('price'):
+            line += f" — {order['price']} {order.get('price_currency', 'UAH')}"
+        text_lines.append(line)
+    await message.answer('\n'.join(text_lines))
+
+@dp.callback_query(F.data == "start_myorders")
+async def cb_myorders(callback: types.CallbackQuery):
+    orders = database.get_user_orders(callback.from_user.id, limit=5, offset=0)
+    lang = _lang(callback.from_user.id)
+    if not orders:
+        await callback.message.answer(i18n.t('msg_no_orders_history', lang))
+        await callback.answer()
+        return
+    text_lines = [i18n.t('msg_order_history_header', lang)]
+    for order in orders:
+        status_map = {
+            'filling': '📝', 'new': '🔥', 'discussion': '💬',
+            'approved': '🛠', 'work': '⚙️', 'done': '✅', 'rejected': '❌'
+        }
+        emoji = status_map.get(order['status'], '📦')
+        date = order['created_at'].strftime('%d.%m.%Y') if order.get('created_at') else ''
+        line = f"{emoji} #{order['id']} — {order['status']} — {date}"
+        if order.get('price'):
+            line += f" — {order['price']} {order.get('price_currency', 'UAH')}"
+        text_lines.append(line)
+    await callback.message.answer('\n'.join(text_lines))
+    await callback.answer()
+
+# --- PRICE ACCEPT/REJECT ---
+@dp.callback_query(F.data.startswith("price_accept:"))
+async def cb_price_accept(callback: types.CallbackQuery):
+    order_id = int(callback.data.split(":")[1])
+    database.update_price_status(order_id, 'accepted')
+    order = database.get_order(order_id)
+    lang = _lang(order['user_id'])
+    await callback.message.edit_text(
+        callback.message.text + '\n\n' + i18n.t('msg_price_accepted', lang, order_id=order_id)
+    )
+    admins = database.get_all_admins()
+    for admin_id in admins:
+        try:
+            await bot.send_message(admin_id, i18n.t('msg_price_accepted_admin', 'ru', order_id=order_id))
+        except Exception:
+            pass
+
+@dp.callback_query(F.data.startswith("price_reject:"))
+async def cb_price_reject(callback: types.CallbackQuery):
+    order_id = int(callback.data.split(":")[1])
+    database.update_price_status(order_id, 'rejected')
+    order = database.get_order(order_id)
+    lang = _lang(order['user_id'])
+    await callback.message.edit_text(
+        callback.message.text + '\n\n' + i18n.t('msg_price_rejected', lang, order_id=order_id)
+    )
+    admins = database.get_all_admins()
+    for admin_id in admins:
+        try:
+            await bot.send_message(admin_id, i18n.t('msg_price_rejected_admin', 'ru', order_id=order_id))
+        except Exception:
+            pass
+
+# --- BROADCAST ---
+@dp.message(Command("broadcast"))
+async def cmd_broadcast_start(message: types.Message):
+    if not database.is_admin(message.chat.id):
+        return
+    lang = _admin_lang()
+    await message.answer(i18n.t('msg_broadcast_prompt', lang))
+    await BroadcastForm.waiting_message.set()
+
+@dp.message(BroadcastForm.waiting_message)
+async def process_broadcast(message: types.Message, state: FSMContext):
+    if not database.is_admin(message.chat.id):
+        await state.clear()
+        return
+    user_ids = database.get_all_customer_user_ids()
+    sent, failed = 0, 0
+    for uid in user_ids:
+        try:
+            await bot.send_message(uid, message.text)
+            sent += 1
+        except Exception:
+            failed += 1
+    await message.answer(i18n.t('msg_broadcast_sent', 'ru', count=sent, failed=failed))
+    await state.clear()
+
+# --- DEADLINE REMINDER ---
+async def check_deadline_reminders():
+    orders = database.get_upcoming_deadlines(days_ahead=1)
+    for order in orders:
+        lang = database.get_user_language(order['user_id'])
+        deadline_str = str(order['deadline'])
+        try:
+            await bot.send_message(
+                order['user_id'],
+                i18n.t('msg_deadline_reminder', lang, order_id=order['id'], deadline=deadline_str)
+            )
+        except Exception:
+            pass
+
 # --- SMART INTERCEPTOR ---
 @dp.message()
 async def user_chat_handler(message: types.Message):
@@ -445,6 +571,9 @@ async def check_lost_state(message, state):
 
 async def main():
     i18n.refresh_db_overrides()
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(check_deadline_reminders, 'cron', hour=9)
+    scheduler.start()
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

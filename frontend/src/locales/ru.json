@@ -23,7 +23,10 @@
     "orders": "Заказы",
     "bot_settings": "Настройки бота",
     "logout": "Выйти",
-    "logout_success": "Выход выполнен"
+    "logout_success": "Выход выполнен",
+    "customers": "Клиенты",
+    "templates": "Шаблоны",
+    "analytics": "Аналитика"
   },
 
   "dashboard": {
@@ -98,7 +101,19 @@
     "edit_status_approved": "🛠 В работе",
     "edit_status_work": "⚙️ Выполняется",
     "edit_status_done": "✅ ГОТОВ",
-    "edit_status_rejected": "❌ Отказы"
+    "edit_status_rejected": "❌ Отказы",
+
+    "col_price": "Цена",
+    "col_deadline": "Дедлайн",
+    "price_pending": "⏳ Ожидает",
+    "price_accepted": "✅ Принята",
+    "price_rejected": "❌ Отклонена",
+    "btn_export_csv": "CSV",
+    "btn_export_excel": "Excel",
+    "btn_invoice": "Счёт PDF",
+    "price_label": "Цена",
+    "deadline_label": "Дедлайн",
+    "currency_label": "Валюта"
   },
 
   "bot_config": {
@@ -155,5 +170,46 @@
     "err_save_texts": "Ошибка сохранения текстов",
     "msg_settings_saved": "Настройки сохранены успешно",
     "err_save_settings": "Ошибка сохранения настроек"
+  },
+
+  "customers": {
+    "title": "👥 База клиентов",
+    "col_name": "Имя",
+    "col_phone": "Телефон",
+    "col_email": "Email",
+    "col_orders": "Заказов",
+    "col_spent": "Потрачено",
+    "col_last_order": "Последний заказ",
+    "btn_edit": "Редактировать",
+    "err_load": "Ошибка загрузки клиентов",
+    "msg_updated": "Клиент обновлен",
+    "err_update": "Ошибка обновления",
+    "orders_history": "История заказов"
+  },
+
+  "templates": {
+    "title": "📝 Шаблоны ответов",
+    "btn_add": "Добавить шаблон",
+    "col_name": "Название",
+    "col_body": "Текст",
+    "modal_add_title": "Новый шаблон",
+    "modal_edit_title": "Редактировать шаблон",
+    "msg_saved": "Шаблон сохранен",
+    "msg_deleted": "Шаблон удален",
+    "err_load": "Ошибка загрузки шаблонов",
+    "name_placeholder": "Название шаблона",
+    "body_placeholder": "Текст шаблона..."
+  },
+
+  "analytics": {
+    "title": "📊 Аналитика",
+    "revenue": "Выручка",
+    "avg_order": "Средний чек",
+    "avg_time": "Среднее время выполнения",
+    "hours": "часов",
+    "orders_by_status": "Заказы по статусам",
+    "date_range": "Период",
+    "total_orders": "Всего заказов",
+    "err_load": "Ошибка загрузки аналитики"
   }
 }

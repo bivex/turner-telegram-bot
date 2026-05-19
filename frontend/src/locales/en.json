@@ -23,7 +23,10 @@
     "orders": "Orders",
     "bot_settings": "Bot Settings",
     "logout": "Logout",
-    "logout_success": "Logged out"
+    "logout_success": "Logged out",
+    "customers": "Customers",
+    "templates": "Templates",
+    "analytics": "Analytics"
   },
 
   "dashboard": {
@@ -99,7 +102,19 @@
     "edit_status_approved": "🛠 In Progress",
     "edit_status_work": "⚙️ Processing",
     "edit_status_done": "✅ DONE",
-    "edit_status_rejected": "❌ Rejected"
+    "edit_status_rejected": "❌ Rejected",
+
+    "col_price": "Price",
+    "col_deadline": "Deadline",
+    "price_pending": "⏳ Pending",
+    "price_accepted": "✅ Accepted",
+    "price_rejected": "❌ Rejected",
+    "btn_export_csv": "CSV",
+    "btn_export_excel": "Excel",
+    "btn_invoice": "Invoice PDF",
+    "price_label": "Price",
+    "deadline_label": "Deadline",
+    "currency_label": "Currency"
   },
 
   "bot_config": {
@@ -156,5 +171,46 @@
     "err_save_texts": "Error saving texts",
     "msg_settings_saved": "Settings saved successfully",
     "err_save_settings": "Error saving settings"
+  },
+
+  "customers": {
+    "title": "👥 Customer Database",
+    "col_name": "Name",
+    "col_phone": "Phone",
+    "col_email": "Email",
+    "col_orders": "Orders",
+    "col_spent": "Total Spent",
+    "col_last_order": "Last Order",
+    "btn_edit": "Edit",
+    "err_load": "Error loading customers",
+    "msg_updated": "Customer updated",
+    "err_update": "Update error",
+    "orders_history": "Order History"
+  },
+
+  "templates": {
+    "title": "📝 Reply Templates",
+    "btn_add": "Add Template",
+    "col_name": "Name",
+    "col_body": "Text",
+    "modal_add_title": "New Template",
+    "modal_edit_title": "Edit Template",
+    "msg_saved": "Template saved",
+    "msg_deleted": "Template deleted",
+    "err_load": "Error loading templates",
+    "name_placeholder": "Template name",
+    "body_placeholder": "Template text..."
+  },
+
+  "analytics": {
+    "title": "📊 Analytics",
+    "revenue": "Revenue",
+    "avg_order": "Average Order",
+    "avg_time": "Avg Completion Time",
+    "hours": "hours",
+    "orders_by_status": "Orders by Status",
+    "date_range": "Date Range",
+    "total_orders": "Total Orders",
+    "err_load": "Error loading analytics"
   }
 }

@@ -16,6 +16,9 @@ import Dashboard from './components/Dashboard';
 import Orders from './components/Orders';
 import BotConfig from './components/BotConfig';
 import MainLayout from './components/MainLayout';
+import Customers from './components/Customers';
+import Templates from './components/Templates';
+import Analytics from './components/Analytics';
 
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -37,6 +40,9 @@ function App() {
               <Route element={<MainLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/orders" element={<Orders />} />
+                <Route path="/customers" element={<Customers />} />
+                <Route path="/templates" element={<Templates />} />
+                <Route path="/analytics" element={<Analytics />} />
                 <Route path="/bot-config" element={<BotConfig />} />
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
               </Route>

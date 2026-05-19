@@ -3,7 +3,8 @@ import { Button, Statistic, Row, Col, Card } from 'antd';
 import {
   ShoppingCartOutlined,
   SettingOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  DollarOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -15,11 +16,16 @@ const Dashboard = () => {
     new_orders: 0,
     active_orders: 0
   });
+  const [analyticsQuick, setAnalyticsQuick] = useState({
+    total_revenue: 0,
+    average_order_value: 0
+  });
   const navigate = useNavigate();
   const { t } = useTranslation();
 
   useEffect(() => {
     fetchStats();
+    fetchAnalyticsQuick();
   }, []);
 
   const fetchStats = async () => {
@@ -31,12 +37,24 @@ const Dashboard = () => {
     }
   };
 
+  const fetchAnalyticsQuick = async () => {
+    try {
+      const response = await axios.get('/api/orders/analytics');
+      setAnalyticsQuick({
+        total_revenue: response.data.total_revenue || 0,
+        average_order_value: response.data.average_order_value || 0
+      });
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    }
+  };
+
   return (
     <div className="dashboard-content">
       <h1>{t('dashboard.title')}</h1>
 
       <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={8}>
+        <Col span={6}>
           <Card>
             <Statistic
               title={t('dashboard.total_orders')}
@@ -45,7 +63,7 @@ const Dashboard = () => {
             />
           </Card>
         </Col>
-        <Col span={8}>
+        <Col span={6}>
           <Card>
             <Statistic
               title={t('dashboard.new_orders')}
@@ -55,11 +73,23 @@ const Dashboard = () => {
             />
           </Card>
         </Col>
-        <Col span={8}>
+        <Col span={6}>
           <Card>
             <Statistic
-              title={t('dashboard.active_orders')}
-              value={stats.active_orders}
+              title={t('analytics.revenue')}
+              value={analyticsQuick.total_revenue}
+              precision={2}
+              prefix={<DollarOutlined />}
+              valueStyle={{ color: '#3f8600' }}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic
+              title={t('analytics.avg_order')}
+              value={analyticsQuick.average_order_value}
+              precision={2}
               prefix={<ShoppingCartOutlined />}
               valueStyle={{ color: '#1890ff' }}
             />
@@ -81,6 +111,13 @@ const Dashboard = () => {
           onClick={() => navigate('/bot-config')}
         >
           {t('dashboard.bot_settings_btn')}
+        </Button>
+        <Button
+          icon={<BarChartOutlined />}
+          onClick={() => navigate('/analytics')}
+          style={{ marginLeft: 8 }}
+        >
+          {t('layout.analytics')}
         </Button>
       </Card>
     </div>

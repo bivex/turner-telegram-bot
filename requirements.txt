@@ -4,3 +4,4 @@ python-dotenv
 streamlit
 pandas
 cryptography
+apscheduler==3.10.4

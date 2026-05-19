@@ -55,5 +55,15 @@
   "lang_changed": "✅ Language changed.",
   "lang_ru": "🇷🇺 Русский",
   "lang_en": "🇬🇧 English",
-  "lang_uk": "🇺🇦 Українська"
+  "lang_uk": "🇺🇦 Українська",
+  "btn_my_orders": "📋 My Orders",
+  "msg_no_orders_history": "You have no orders.",
+  "msg_order_history_header": "📋 Your orders:",
+  "msg_price_accepted": "✅ You accepted the price for order #{order_id}.",
+  "msg_price_rejected": "❌ You rejected the price for order #{order_id}.",
+  "msg_price_accepted_admin": "✅ Client accepted price for order #{order_id}.",
+  "msg_price_rejected_admin": "❌ Client rejected price for order #{order_id}.",
+  "msg_deadline_reminder": "⏰ Reminder: Order #{order_id} will be ready by {deadline}!",
+  "msg_broadcast_sent": "📤 Broadcast sent: {count} delivered, {failed} failed.",
+  "msg_broadcast_prompt": "Send the message text to broadcast to all customers:"
 }

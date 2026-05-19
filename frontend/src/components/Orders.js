@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
 import {
   Table, Button, Select, Tag, Modal, Image, Form, Input, message,
-  Space, Card, Row, Col, Statistic, Avatar, Tooltip, Badge
+  Space, Card, Row, Col, Statistic, Avatar, Tooltip, Badge,
+  InputNumber, DatePicker, Descriptions
 } from 'antd';
 import {
   EyeOutlined, EditOutlined, ShoppingCartOutlined,
-  UserOutlined, SyncOutlined, DeleteOutlined
+  UserOutlined, SyncOutlined, DeleteOutlined,
+  DownloadOutlined, FileExcelOutlined, FileTextOutlined
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
@@ -14,6 +16,7 @@ import AuthContext from '../contexts/AuthContext';
 
 const { Option } = Select;
 const { TextArea } = Input;
+const { RangePicker } = DatePicker;
 
 const Orders = () => {
   const { loading: authLoading } = useContext(AuthContext);
@@ -99,13 +102,46 @@ const Orders = () => {
 
   const handleEditSubmit = async (values) => {
     try {
-      await axios.put(`/api/orders/${selectedOrder.id}`, values);
+      const payload = { ...values };
+      if (payload.deadline) {
+        payload.deadline = payload.deadline.format('YYYY-MM-DD');
+      }
+      await axios.put(`/api/orders/${selectedOrder.id}`, payload);
       message.success(t('orders.msg_order_updated'));
       setEditModalVisible(false);
       fetchOrders();
     } catch (error) {
       message.error(t('orders.err_update'));
     }
+  };
+
+  const downloadFile = async (url, filename) => {
+    try {
+      const response = await axios.get(url, { responseType: 'blob' });
+      const blob = new Blob([response.data]);
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(link.href);
+    } catch (error) {
+      message.error(t('orders.err_load'));
+      console.error('Download error:', error);
+    }
+  };
+
+  const handleExportCSV = () => {
+    downloadFile('/api/orders/export/csv', 'orders.csv');
+  };
+
+  const handleExportExcel = () => {
+    downloadFile('/api/orders/export/excel', 'orders.xlsx');
+  };
+
+  const handleDownloadInvoice = (orderId) => {
+    downloadFile(`/api/orders/${orderId}/invoice`, `invoice_${orderId}.pdf`);
   };
 
   const columns = [
@@ -142,6 +178,31 @@ const Orders = () => {
           ) : '-'}
         </div>
       ),
+    },
+    {
+      title: t('orders.col_price'),
+      key: 'price',
+      render: (_, record) => {
+        if (!record.price) return <Tag>-</Tag>;
+        const priceStatusMap = {
+          pending: { color: 'default', text: t('orders.price_pending') },
+          accepted: { color: 'success', text: t('orders.price_accepted') },
+          rejected: { color: 'error', text: t('orders.price_rejected') },
+        };
+        const statusInfo = priceStatusMap[record.price_status] || { color: 'default', text: record.price_status };
+        return (
+          <Space direction="vertical" size={0}>
+            <span>{record.price} {record.currency || ''}</span>
+            <Tag color={statusInfo.color} style={{ fontSize: 11 }}>{statusInfo.text}</Tag>
+          </Space>
+        );
+      },
+    },
+    {
+      title: t('orders.col_deadline'),
+      dataIndex: 'deadline',
+      key: 'deadline',
+      render: (date) => date ? dayjs(date).format('DD.MM.YYYY') : '-',
     },
     {
       title: t('orders.col_status'),
@@ -246,6 +307,18 @@ const Orders = () => {
           </Select>
           <Button onClick={fetchOrders}>{t('orders.refresh')}</Button>
           <Button
+            icon={<FileTextOutlined />}
+            onClick={handleExportCSV}
+          >
+            {t('orders.btn_export_csv')}
+          </Button>
+          <Button
+            icon={<FileExcelOutlined />}
+            onClick={handleExportExcel}
+          >
+            {t('orders.btn_export_excel')}
+          </Button>
+          <Button
             danger
             icon={<DeleteOutlined />}
             onClick={() => {
@@ -330,6 +403,16 @@ const Orders = () => {
                 </div>
               </div>
             )}
+
+            <div style={{ marginTop: 24, textAlign: 'right' }}>
+              <Button
+                type="primary"
+                icon={<DownloadOutlined />}
+                onClick={() => handleDownloadInvoice(selectedOrder.id)}
+              >
+                {t('orders.btn_invoice')}
+              </Button>
+            </div>
           </div>
         )}
       </Modal>
@@ -346,7 +429,10 @@ const Orders = () => {
             onFinish={handleEditSubmit}
             initialValues={{
               status: selectedOrder.status,
-              internal_note: selectedOrder.internal_note || ''
+              internal_note: selectedOrder.internal_note || '',
+              price: selectedOrder.price || undefined,
+              currency: selectedOrder.currency || 'UAH',
+              deadline: selectedOrder.deadline ? dayjs(selectedOrder.deadline) : undefined,
             }}
           >
             <Form.Item
@@ -369,6 +455,41 @@ const Orders = () => {
               label={t('orders.internal_note')}
             >
               <TextArea rows={4} placeholder={t('orders.note_placeholder')} />
+            </Form.Item>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="price"
+                  label={t('orders.price_label')}
+                >
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    min={0}
+                    precision={2}
+                    placeholder="0.00"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="currency"
+                  label={t('orders.currency_label')}
+                >
+                  <Select>
+                    <Option value="UAH">UAH</Option>
+                    <Option value="USD">USD</Option>
+                    <Option value="EUR">EUR</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Form.Item
+              name="deadline"
+              label={t('orders.deadline_label')}
+            >
+              <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" />
             </Form.Item>
 
             <Form.Item style={{ textAlign: 'right' }}>

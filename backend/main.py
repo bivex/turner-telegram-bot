@@ -6,7 +6,7 @@ import os
 from dotenv import load_dotenv
 
 # Импорт роутеров
-from routers import auth, orders, bot_config
+from routers import auth, orders, bot_config, customers, templates
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -41,6 +41,8 @@ security = HTTPBearer()
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
 app.include_router(bot_config.router, prefix="/api/bot-config", tags=["bot-config"])
+app.include_router(customers.router, prefix="/api/customers", tags=["customers"])
+app.include_router(templates.router, prefix="/api/templates", tags=["templates"])
 
 @app.get("/")
 async def root():

@@ -23,7 +23,10 @@
     "orders": "Замовлення",
     "bot_settings": "Налаштування бота",
     "logout": "Вийти",
-    "logout_success": "Вихід виконано"
+    "logout_success": "Вихід виконано",
+    "customers": "Клієнти",
+    "templates": "Шаблони",
+    "analytics": "Аналітика"
   },
 
   "dashboard": {
@@ -99,7 +102,19 @@
     "edit_status_approved": "🛠 В роботі",
     "edit_status_work": "⚙️ Виконується",
     "edit_status_done": "✅ ГОТОВО",
-    "edit_status_rejected": "❌ Відмови"
+    "edit_status_rejected": "❌ Відмови",
+
+    "col_price": "Ціна",
+    "col_deadline": "Дедлайн",
+    "price_pending": "⏳ Очікує",
+    "price_accepted": "✅ Прийнята",
+    "price_rejected": "❌ Відхилена",
+    "btn_export_csv": "CSV",
+    "btn_export_excel": "Excel",
+    "btn_invoice": "Рахунок PDF",
+    "price_label": "Ціна",
+    "deadline_label": "Дедлайн",
+    "currency_label": "Валюта"
   },
 
   "bot_config": {
@@ -156,5 +171,46 @@
     "err_save_texts": "Помилка збереження текстів",
     "msg_settings_saved": "Налаштування збережено успішно",
     "err_save_settings": "Помилка збереження налаштувань"
+  },
+
+  "customers": {
+    "title": "👥 База клієнтів",
+    "col_name": "Ім'я",
+    "col_phone": "Телефон",
+    "col_email": "Email",
+    "col_orders": "Замовлень",
+    "col_spent": "Витрачено",
+    "col_last_order": "Останнє замовлення",
+    "btn_edit": "Редагувати",
+    "err_load": "Помилка завантаження клієнтів",
+    "msg_updated": "Клієнта оновлено",
+    "err_update": "Помилка оновлення",
+    "orders_history": "Історія замовлень"
+  },
+
+  "templates": {
+    "title": "📝 Шаблони відповідей",
+    "btn_add": "Додати шаблон",
+    "col_name": "Назва",
+    "col_body": "Текст",
+    "modal_add_title": "Новий шаблон",
+    "modal_edit_title": "Редагувати шаблон",
+    "msg_saved": "Шаблон збережено",
+    "msg_deleted": "Шаблон видалено",
+    "err_load": "Помилка завантаження шаблонів",
+    "name_placeholder": "Назва шаблону",
+    "body_placeholder": "Текст шаблону..."
+  },
+
+  "analytics": {
+    "title": "📊 Аналітика",
+    "revenue": "Виручка",
+    "avg_order": "Середній чек",
+    "avg_time": "Середній час виконання",
+    "hours": "годин",
+    "orders_by_status": "Замовлення за статусами",
+    "date_range": "Період",
+    "total_orders": "Усього замовлень",
+    "err_load": "Помилка завантаження аналітики"
   }
 }
