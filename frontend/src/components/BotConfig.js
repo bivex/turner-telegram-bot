@@ -42,8 +42,6 @@ const BotConfig = () => {
       }
 
       if (flowResponse.data) {
-          console.log("Flow Data Received:", flowResponse.data);
-          // Используем setTimeout чтобы обойти возможные race conditions при рендере вкладок
           setTimeout(() => {
               flowForm.setFieldsValue({
                   steps: Array.isArray(flowResponse.data) ? flowResponse.data : []
@@ -79,11 +77,10 @@ const BotConfig = () => {
   const saveFlow = async (values) => {
       setLoading(true);
       try {
-          // values.steps is already an array of objects
           await axios.put('/api/bot-config/flow', values.steps);
-          message.success("Структура опроса сохранена!");
+          message.success(t('bot_config.msg_flow_saved'));
       } catch (error) {
-          message.error("Ошибка сохранения структуры.");
+          message.error(t('bot_config.err_save_flow'));
       } finally {
           setLoading(false);
       }
@@ -91,41 +88,41 @@ const BotConfig = () => {
 
   const handleAddAdmin = async () => {
     if (!adminChatId.trim()) {
-      message.error('Please enter a chat ID');
+      message.error(t('bot_config.err_admin_chat_id'));
       return;
     }
     try {
       await axios.post('/api/bot-config/admins', { chat_id: adminChatId });
-      message.success('Admin added');
+      message.success(t('bot_config.msg_admin_added'));
       setAdminChatId('');
       loadConfig();
     } catch (error) {
-      message.error('Error adding admin');
+      message.error(t('bot_config.err_add_admin'));
     }
   };
 
   const handleRemoveAdmin = async (chatId) => {
     try {
       await axios.delete(`/api/bot-config/admins/${chatId}`);
-      message.success('Admin removed');
+      message.success(t('bot_config.msg_admin_removed'));
       loadConfig();
     } catch (error) {
-      message.error('Error removing admin');
+      message.error(t('bot_config.err_remove_admin'));
     }
   };
 
   const handleBroadcast = async () => {
     if (!broadcastText.trim()) {
-      message.error('Please enter a message');
+      message.error(t('bot_config.err_broadcast_empty'));
       return;
     }
     setBroadcastSending(true);
     try {
       await axios.post('/api/bot-config/broadcast', { text: broadcastText });
-      message.success('Broadcast sent');
+      message.success(t('bot_config.msg_broadcast_sent'));
       setBroadcastText('');
     } catch (error) {
-      message.error('Error sending broadcast');
+      message.error(t('bot_config.err_broadcast'));
     } finally {
       setBroadcastSending(false);
     }
@@ -134,13 +131,13 @@ const BotConfig = () => {
   const tabItems = [
     {
       key: 'flow',
-      label: '🚀 Конструктор опроса',
+      label: t('bot_config.tab_flow'),
       forceRender: true,
       children: (
-        <Card title="Настройка логики (Визуальный редактор)">
+        <Card title={t('bot_config.card_flow_editor')}>
            <Alert
-              message="Внимание"
-              description="Здесь вы можете визуально изменить шаги опроса бота."
+              message={t('bot_config.flow_alert_title')}
+              description={t('bot_config.flow_alert_desc')}
               type="info"
               showIcon
               style={{ marginBottom: 16 }}
@@ -153,7 +150,7 @@ const BotConfig = () => {
                     <Card size="small" key={key} style={{ marginBottom: 16, borderLeft: '4px solid #1890ff' }}
                       title={
                         <Space>
-                          <strong>Шаг {index + 1}</strong>
+                          <strong>{t('bot_config.flow_step')} {index + 1}</strong>
                           <Button size="small" icon={<ArrowUpOutlined />} disabled={index === 0} onClick={() => move(index, index - 1)} />
                           <Button size="small" icon={<ArrowDownOutlined />} disabled={index === fields.length - 1} onClick={() => move(index, index + 1)} />
                         </Space>
@@ -162,28 +159,28 @@ const BotConfig = () => {
                     >
                       <Row gutter={16}>
                         <Col span={8}>
-                          <Form.Item {...restField} name={[name, 'id']} label="ID поля (напр. age)" rules={[{ required: true, message: 'Укажите ID' }]}>
-                            <Input placeholder="Внутренний ID" />
+                          <Form.Item {...restField} name={[name, 'id']} label={t('bot_config.flow_field_id')} rules={[{ required: true, message: t('bot_config.flow_err_field_id') }]}>
+                            <Input placeholder={t('bot_config.flow_field_id_ph')} />
                           </Form.Item>
                         </Col>
                         <Col span={8}>
-                          <Form.Item {...restField} name={[name, 'type']} label="Тип вопроса" rules={[{ required: true, message: 'Выберите тип' }]}>
+                          <Form.Item {...restField} name={[name, 'type']} label={t('bot_config.flow_field_type')} rules={[{ required: true, message: t('bot_config.flow_err_type') }]}>
                             <Select>
-                              <Select.Option value="text">Текст (пользователь вводит)</Select.Option>
-                              <Select.Option value="choice">Кнопки (выбор)</Select.Option>
-                              <Select.Option value="photo">Фото / Документ</Select.Option>
+                              <Select.Option value="text">{t('bot_config.flow_type_text')}</Select.Option>
+                              <Select.Option value="choice">{t('bot_config.flow_type_choice')}</Select.Option>
+                              <Select.Option value="photo">{t('bot_config.flow_type_photo')}</Select.Option>
                             </Select>
                           </Form.Item>
                         </Col>
                         <Col span={8}>
-                           <Form.Item {...restField} name={[name, 'label_key']} label="Ключ перевода (Опционально)">
-                            <Input placeholder="Напр: step_dim_text" />
+                           <Form.Item {...restField} name={[name, 'label_key']} label={t('bot_config.flow_field_label_key')}>
+                            <Input placeholder={t('bot_config.flow_field_label_key_ph')} />
                           </Form.Item>
                         </Col>
                       </Row>
-                      
-                      <Form.Item {...restField} name={[name, 'label']} label="Текст вопроса (если не используете перевод)">
-                        <TextArea rows={2} placeholder="Введите текст вопроса, который увидит пользователь..." />
+
+                      <Form.Item {...restField} name={[name, 'label']} label={t('bot_config.flow_field_label')}>
+                        <TextArea rows={2} placeholder={t('bot_config.flow_field_label_ph')} />
                       </Form.Item>
 
                       {/* Render options ONLY if type is 'choice' */}
@@ -196,25 +193,25 @@ const BotConfig = () => {
                           if (stepType === 'choice') {
                             return (
                               <div style={{ backgroundColor: '#f5f5f5', padding: '16px', borderRadius: '4px', marginTop: '16px' }}>
-                                <h4>Кнопки выбора:</h4>
+                                <h4>{t('bot_config.flow_options_title')}</h4>
                                 <Form.List name={[name, 'options']}>
                                   {(optFields, { add: addOpt, remove: optRemove }) => (
                                     <>
                                       {optFields.map(({ key: optKey, name: optName, ...optRestField }) => (
                                         <Row key={optKey} gutter={8} style={{ marginBottom: 8 }}>
                                           <Col span={8}>
-                                            <Form.Item {...optRestField} name={[optName, 'val']} rules={[{ required: true, message: 'Укажите значение' }]} style={{ marginBottom: 0 }}>
-                                              <Input placeholder="Значение (val)" />
+                                            <Form.Item {...optRestField} name={[optName, 'val']} rules={[{ required: true, message: t('bot_config.flow_err_option_val') }]} style={{ marginBottom: 0 }}>
+                                              <Input placeholder={t('bot_config.flow_option_val_ph')} />
                                             </Form.Item>
                                           </Col>
                                           <Col span={10}>
-                                            <Form.Item {...optRestField} name={[optName, 'label']} rules={[{ required: true, message: 'Укажите текст кнопки' }]} style={{ marginBottom: 0 }}>
-                                              <Input placeholder="Текст кнопки" />
+                                            <Form.Item {...optRestField} name={[optName, 'label']} rules={[{ required: true, message: t('bot_config.flow_err_option_label') }]} style={{ marginBottom: 0 }}>
+                                              <Input placeholder={t('bot_config.flow_option_label_ph')} />
                                             </Form.Item>
                                           </Col>
                                           <Col span={4}>
                                              <Form.Item {...optRestField} name={[optName, 'label_key']} style={{ marginBottom: 0 }}>
-                                              <Input placeholder="Ключ перевода" />
+                                              <Input placeholder={t('bot_config.flow_option_label_key_ph')} />
                                             </Form.Item>
                                           </Col>
                                           <Col span={2}>
@@ -223,7 +220,7 @@ const BotConfig = () => {
                                         </Row>
                                       ))}
                                       <Button type="dashed" onClick={() => addOpt()} block icon={<PlusOutlined />}>
-                                        Добавить кнопку
+                                        {t('bot_config.flow_add_option')}
                                       </Button>
                                     </>
                                   )}
@@ -238,19 +235,19 @@ const BotConfig = () => {
                     </Card>
                   ))}
                   <Button type="dashed" onClick={() => add({ type: 'text' })} block icon={<PlusOutlined />}>
-                    Добавить новый шаг
+                    {t('bot_config.flow_add_step')}
                   </Button>
                 </>
               )}
             </Form.List>
-            
+
             <Form.Item style={{ textAlign: 'right', marginTop: 24 }}>
               <Space>
                 <Button icon={<ReloadOutlined />} onClick={loadConfig}>
                   {t('reset')}
                 </Button>
                 <Button type="primary" icon={<SaveOutlined />} htmlType="submit" loading={loading}>
-                  Сохранить структуру
+                  {t('bot_config.flow_save')}
                 </Button>
               </Space>
             </Form.Item>
@@ -302,11 +299,11 @@ const BotConfig = () => {
               style={{ marginBottom: 16 }}
             />
 
-            <Divider>Admins</Divider>
+            <Divider>{t('bot_config.admins_title')}</Divider>
 
-            <Card size="small" title="Current Admins" style={{ marginBottom: 16 }}>
+            <Card size="small" title={t('bot_config.admins_current')} style={{ marginBottom: 16 }}>
               <Space style={{ width: '100%', marginBottom: 12 }} wrap>
-                {admins.length === 0 && <Tag>No admins configured</Tag>}
+                {admins.length === 0 && <Tag>{t('bot_config.admins_none')}</Tag>}
                 {admins.map((admin) => (
                   <Tag
                     key={admin.chat_id || admin}
@@ -319,7 +316,7 @@ const BotConfig = () => {
               </Space>
               <Space>
                 <Input
-                  placeholder="Chat ID"
+                  placeholder={t('bot_config.admin_chat_id_ph')}
                   value={adminChatId}
                   onChange={(e) => setAdminChatId(e.target.value)}
                   style={{ width: 200 }}
@@ -330,17 +327,17 @@ const BotConfig = () => {
                   icon={<UserAddOutlined />}
                   onClick={handleAddAdmin}
                 >
-                  Add Admin
+                  {t('bot_config.admin_add')}
                 </Button>
               </Space>
             </Card>
 
-            <Divider>Broadcast</Divider>
+            <Divider>{t('bot_config.broadcast_title')}</Divider>
 
-            <Card size="small" title="Send Broadcast Message">
+            <Card size="small" title={t('bot_config.broadcast_card')}>
               <TextArea
                 rows={3}
-                placeholder="Enter broadcast message text..."
+                placeholder={t('bot_config.broadcast_ph')}
                 value={broadcastText}
                 onChange={(e) => setBroadcastText(e.target.value)}
                 style={{ marginBottom: 12 }}
@@ -352,7 +349,7 @@ const BotConfig = () => {
                 loading={broadcastSending}
                 disabled={!broadcastText.trim()}
               >
-                Send Broadcast
+                {t('bot_config.broadcast_send')}
               </Button>
             </Card>
 

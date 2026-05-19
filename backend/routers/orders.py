@@ -375,18 +375,26 @@ async def delete_all_orders(_payload: dict = Depends(verify_token)):
 
 
 async def send_status_update_notification(user_id: int, order_id: int, new_status: str):
-    """Отправить уведомление клиенту через Telegram Bot API"""
-    status_map = {
-        'new': 'НОВЫЙ (Принят в обработку)',
-        'discussion': 'Обсуждение деталей',
-        'approved': 'Одобрен / В работе',
-        'work': 'Выполняется',
-        'done': 'ГОТОВ!',
-        'rejected': 'Отказ'
+    """Send status update notification to client via Telegram Bot API"""
+    lang = database.get_user_language(user_id)
+
+    status_labels = {
+        'new': {'ru': 'НОВЫЙ (Принят в обработку)', 'en': 'NEW (Accepted)', 'uk': 'НОВЕ (Прийнято)'},
+        'discussion': {'ru': 'Обсуждение деталей', 'en': 'Discussion', 'uk': "Обговорення деталей"},
+        'approved': {'ru': 'Одобрен / В работе', 'en': 'Approved / In Progress', 'uk': 'Схвалено / В роботі'},
+        'work': {'ru': 'Выполняется', 'en': 'In Progress', 'uk': 'Виконується'},
+        'done': {'ru': 'ГОТОВ!', 'en': 'DONE!', 'uk': 'ГОТОВО!'},
+        'rejected': {'ru': 'Отказ', 'en': 'Rejected', 'uk': 'Відмова'},
     }
 
-    status_text = status_map.get(new_status, new_status)
-    message_text = f"<b>Статус вашего заказа #{order_id} изменен:</b>\n\n{status_text}"
+    status_text = status_labels.get(new_status, {}).get(lang, new_status)
+
+    headers_map = {
+        'ru': f'<b>Статус вашего заказа #{order_id} изменен:</b>',
+        'en': f'<b>Order #{order_id} status changed:</b>',
+        'uk': f'<b>Статус вашого замовлення #{order_id} змінено:</b>',
+    }
+    message_text = f"{headers_map.get(lang, headers_map['ru'])}\n\n{status_text}"
 
     bot_token = config.BOT_TOKEN
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -408,18 +416,23 @@ async def send_price_notification(user_id: int, order_id: int, price: float, cur
     """Send price notification to client with inline accept/decline buttons"""
     bot_token = config.BOT_TOKEN
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    lang = database.get_user_language(user_id)
 
-    message_text = (
-        f"<b>Установлена цена по заказу #{order_id}</b>\n\n"
-        f"Сумма: <b>{price} {currency}</b>\n\n"
-        f"Пожалуйста, подтвердите или отклоните:"
-    )
+    messages = {
+        'ru': f"<b>Установлена цена по заказу #{order_id}</b>\n\nСумма: <b>{price} {currency}</b>\n\nПожалуйста, подтвердите или отклоните:",
+        'en': f"<b>Price set for order #{order_id}</b>\n\nAmount: <b>{price} {currency}</b>\n\nPlease accept or decline:",
+        'uk': f"<b>Встановлено ціну за замовлення #{order_id}</b>\n\nСума: <b>{price} {currency}</b>\n\nБудь ласка, підтвердіть або відхиліть:",
+    }
+    message_text = messages.get(lang, messages['ru'])
+
+    btn_accept = {'ru': 'Принять', 'en': 'Accept', 'uk': 'Прийняти'}
+    btn_reject = {'ru': 'Отклонить', 'en': 'Decline', 'uk': 'Відхилити'}
 
     inline_keyboard = {
         "inline_keyboard": [
             [
-                {"text": "Принять", "callback_data": f"price_accept:{order_id}"},
-                {"text": "Отклонить", "callback_data": f"price_reject:{order_id}"}
+                {"text": btn_accept.get(lang, 'Принять'), "callback_data": f"price_accept:{order_id}"},
+                {"text": btn_reject.get(lang, 'Отклонить'), "callback_data": f"price_reject:{order_id}"}
             ]
         ]
     }

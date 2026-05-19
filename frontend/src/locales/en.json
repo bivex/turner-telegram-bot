@@ -170,7 +170,55 @@
     "msg_texts_saved": "Texts saved successfully",
     "err_save_texts": "Error saving texts",
     "msg_settings_saved": "Settings saved successfully",
-    "err_save_settings": "Error saving settings"
+    "err_save_settings": "Error saving settings",
+
+    "tab_flow": "🚀 Survey Builder",
+    "card_flow_editor": "Logic Settings (Visual Editor)",
+    "flow_alert_title": "Attention",
+    "flow_alert_desc": "Here you can visually modify the bot survey steps.",
+    "flow_step": "Step",
+    "flow_field_id": "Field ID (e.g. age)",
+    "flow_err_field_id": "Enter field ID",
+    "flow_field_id_ph": "Internal ID",
+    "flow_field_type": "Question type",
+    "flow_err_type": "Select type",
+    "flow_type_text": "Text (user input)",
+    "flow_type_choice": "Buttons (choice)",
+    "flow_type_photo": "Photo / Document",
+    "flow_field_label_key": "Translation key (Optional)",
+    "flow_field_label_key_ph": "e.g.: step_dim_text",
+    "flow_field_label": "Question text (if not using translation)",
+    "flow_field_label_ph": "Enter question text that the user will see...",
+    "flow_options_title": "Choice buttons:",
+    "flow_err_option_val": "Enter value",
+    "flow_option_val_ph": "Value (val)",
+    "flow_err_option_label": "Enter button text",
+    "flow_option_label_ph": "Button text",
+    "flow_option_label_key_ph": "Translation key",
+    "flow_add_option": "Add button",
+    "flow_add_step": "Add new step",
+    "flow_save": "Save structure",
+    "msg_flow_saved": "Survey structure saved!",
+    "err_save_flow": "Error saving structure.",
+
+    "admins_title": "Admins",
+    "admins_current": "Current Admins",
+    "admins_none": "No admins configured",
+    "admin_chat_id_ph": "Chat ID",
+    "admin_add": "Add Admin",
+    "err_admin_chat_id": "Please enter a chat ID",
+    "msg_admin_added": "Admin added",
+    "err_add_admin": "Error adding admin",
+    "msg_admin_removed": "Admin removed",
+    "err_remove_admin": "Error removing admin",
+
+    "broadcast_title": "Broadcast",
+    "broadcast_card": "Send Broadcast Message",
+    "broadcast_ph": "Enter broadcast message text...",
+    "broadcast_send": "Send Broadcast",
+    "err_broadcast_empty": "Please enter a message",
+    "msg_broadcast_sent": "Broadcast sent",
+    "err_broadcast": "Error sending broadcast"
   },
 
   "customers": {
@@ -185,7 +233,10 @@
     "err_load": "Error loading customers",
     "msg_updated": "Customer updated",
     "err_update": "Update error",
-    "orders_history": "Order History"
+    "orders_history": "Order History",
+    "col_id": "ID",
+    "col_notes": "Notes",
+    "pagination": "{{from}}-{{to}} of {{total}}"
   },
 
   "templates": {

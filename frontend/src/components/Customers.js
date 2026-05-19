@@ -160,7 +160,7 @@ const Customers = () => {
 
   const orderColumns = [
     {
-      title: 'ID',
+      title: t('customers.col_id'),
       dataIndex: 'id',
       key: 'id',
       width: 60,
@@ -194,7 +194,7 @@ const Customers = () => {
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) =>
-              `${range[0]}-${range[1]} of ${total}`,
+              t('customers.pagination', { from: range[0], to: range[1], total }),
           }}
           onChange={(pag) => setPagination(pag)}
         />
@@ -268,7 +268,7 @@ const Customers = () => {
             <Input placeholder="email@example.com" />
           </Form.Item>
 
-          <Form.Item name="notes" label="Notes">
+          <Form.Item name="notes" label={t('customers.col_notes')}>
             <Input.TextArea rows={3} />
           </Form.Item>
 

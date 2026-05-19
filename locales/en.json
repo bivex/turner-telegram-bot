@@ -71,5 +71,12 @@
   "msg_template_body": "📋 <b>{name}</b>\n\n{body}\n\n↩️ Reply to client message + /sendtpl {id} order_number",
   "msg_template_not_found": "Template not found.",
   "msg_sendtpl_format": "Format: /sendtpl template_id order_id",
-  "msg_sendtpl_bad_id": "⚠️ Invalid IDs. Format: /sendtpl template_id order_id"
+  "msg_sendtpl_bad_id": "⚠️ Invalid IDs. Format: /sendtpl template_id order_id",
+  "status_filling": "Draft",
+  "status_new": "New",
+  "status_discussion": "Discussion",
+  "status_approved": "Approved",
+  "status_work": "In Progress",
+  "status_done": "Done",
+  "status_rejected": "Rejected"
 }

@@ -71,5 +71,12 @@
   "msg_template_body": "📋 <b>{name}</b>\n\n{body}\n\n↩️ Reply на сообщение клиента + /sendtpl {id} номер_заказа",
   "msg_template_not_found": "Шаблон не найден.",
   "msg_sendtpl_format": "Формат: /sendtpl template_id order_id",
-  "msg_sendtpl_bad_id": "⚠️ Неверные ID. Формат: /sendtpl template_id order_id"
+  "msg_sendtpl_bad_id": "⚠️ Неверные ID. Формат: /sendtpl template_id order_id",
+  "status_filling": "Черновик",
+  "status_new": "Новый",
+  "status_discussion": "Обсуждение",
+  "status_approved": "Одобрен",
+  "status_work": "В работе",
+  "status_done": "Готов",
+  "status_rejected": "Отказ"
 }

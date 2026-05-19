@@ -44,7 +44,7 @@ const Analytics = () => {
       const response = await axios.get('/api/orders/analytics', { params });
       setAnalytics(response.data);
     } catch (error) {
-      message.error(t('analytics.err_load') || 'Error loading analytics');
+      message.error(t('analytics.err_load'));
       console.error(error);
     }
     setLoading(false);

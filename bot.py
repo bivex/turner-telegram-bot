@@ -487,15 +487,26 @@ async def cmd_send_template(message: types.Message):
 MYORDERS_PER_PAGE = 5
 
 def _build_orders_text(orders, lang):
-    status_map = {
+    status_names = {
+        'filling': i18n.t('status_filling', lang),
+        'new': i18n.t('status_new', lang),
+        'discussion': i18n.t('status_discussion', lang),
+        'approved': i18n.t('status_approved', lang),
+        'work': i18n.t('status_work', lang),
+        'done': i18n.t('status_done', lang),
+        'rejected': i18n.t('status_rejected', lang),
+    }
+    status_emoji = {
         'filling': '📝', 'new': '🔥', 'discussion': '💬',
         'approved': '🛠', 'work': '⚙️', 'done': '✅', 'rejected': '❌'
     }
     lines = [i18n.t('msg_order_history_header', lang)]
     for order in orders:
-        emoji = status_map.get(order['status'], '📦')
+        s = order['status']
+        emoji = status_emoji.get(s, '📦')
         date = order['created_at'].strftime('%d.%m.%Y') if order.get('created_at') else ''
-        line = f"{emoji} #{order['id']} — {order['status']} — {date}"
+        name = status_names.get(s, s)
+        line = f"{emoji} #{order['id']} — {name} — {date}"
         if order.get('price'):
             line += f" — {order['price']} {order.get('price_currency', 'UAH')}"
         lines.append(line)

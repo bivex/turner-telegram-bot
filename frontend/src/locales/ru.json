@@ -170,7 +170,55 @@
     "msg_texts_saved": "Тексты сохранены успешно",
     "err_save_texts": "Ошибка сохранения текстов",
     "msg_settings_saved": "Настройки сохранены успешно",
-    "err_save_settings": "Ошибка сохранения настроек"
+    "err_save_settings": "Ошибка сохранения настроек",
+
+    "tab_flow": "🚀 Конструктор опроса",
+    "card_flow_editor": "Настройка логики (Визуальный редактор)",
+    "flow_alert_title": "Внимание",
+    "flow_alert_desc": "Здесь вы можете визуально изменить шаги опроса бота.",
+    "flow_step": "Шаг",
+    "flow_field_id": "ID поля (напр. age)",
+    "flow_err_field_id": "Укажите ID",
+    "flow_field_id_ph": "Внутренний ID",
+    "flow_field_type": "Тип вопроса",
+    "flow_err_type": "Выберите тип",
+    "flow_type_text": "Текст (пользователь вводит)",
+    "flow_type_choice": "Кнопки (выбор)",
+    "flow_type_photo": "Фото / Документ",
+    "flow_field_label_key": "Ключ перевода (Опционально)",
+    "flow_field_label_key_ph": "Напр: step_dim_text",
+    "flow_field_label": "Текст вопроса (если не используете перевод)",
+    "flow_field_label_ph": "Введите текст вопроса, который увидит пользователь...",
+    "flow_options_title": "Кнопки выбора:",
+    "flow_err_option_val": "Укажите значение",
+    "flow_option_val_ph": "Значение (val)",
+    "flow_err_option_label": "Укажите текст кнопки",
+    "flow_option_label_ph": "Текст кнопки",
+    "flow_option_label_key_ph": "Ключ перевода",
+    "flow_add_option": "Добавить кнопку",
+    "flow_add_step": "Добавить новый шаг",
+    "flow_save": "Сохранить структуру",
+    "msg_flow_saved": "Структура опроса сохранена!",
+    "err_save_flow": "Ошибка сохранения структуры.",
+
+    "admins_title": "Администраторы",
+    "admins_current": "Текущие администраторы",
+    "admins_none": "Нет настроенных администраторов",
+    "admin_chat_id_ph": "Chat ID",
+    "admin_add": "Добавить администратора",
+    "err_admin_chat_id": "Введите Chat ID",
+    "msg_admin_added": "Администратор добавлен",
+    "err_add_admin": "Ошибка добавления администратора",
+    "msg_admin_removed": "Администратор удалён",
+    "err_remove_admin": "Ошибка удаления администратора",
+
+    "broadcast_title": "Рассылка",
+    "broadcast_card": "Отправить сообщение всем клиентам",
+    "broadcast_ph": "Введите текст сообщения для рассылки...",
+    "broadcast_send": "Отправить рассылку",
+    "err_broadcast_empty": "Введите текст сообщения",
+    "msg_broadcast_sent": "Рассылка отправлена",
+    "err_broadcast": "Ошибка отправки рассылки"
   },
 
   "customers": {
@@ -185,7 +233,10 @@
     "err_load": "Ошибка загрузки клиентов",
     "msg_updated": "Клиент обновлен",
     "err_update": "Ошибка обновления",
-    "orders_history": "История заказов"
+    "orders_history": "История заказов",
+    "col_id": "ID",
+    "col_notes": "Заметки",
+    "pagination": "{{from}}-{{to}} из {{total}}"
   },
 
   "templates": {

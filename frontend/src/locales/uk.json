@@ -170,7 +170,55 @@
     "msg_texts_saved": "Тексти збережено успішно",
     "err_save_texts": "Помилка збереження текстів",
     "msg_settings_saved": "Налаштування збережено успішно",
-    "err_save_settings": "Помилка збереження налаштувань"
+    "err_save_settings": "Помилка збереження налаштувань",
+
+    "tab_flow": "🚀 Конструктор опитування",
+    "card_flow_editor": "Налаштування логіки (Візуальний редактор)",
+    "flow_alert_title": "Увага",
+    "flow_alert_desc": "Тут ви можете візуально змінити кроки опитування бота.",
+    "flow_step": "Крок",
+    "flow_field_id": "ID поля (напр. age)",
+    "flow_err_field_id": "Вкажіть ID",
+    "flow_field_id_ph": "Внутрішній ID",
+    "flow_field_type": "Тип питання",
+    "flow_err_type": "Оберіть тип",
+    "flow_type_text": "Текст (користувач вводить)",
+    "flow_type_choice": "Кнопки (вибір)",
+    "flow_type_photo": "Фото / Документ",
+    "flow_field_label_key": "Ключ перекладу (Опціонально)",
+    "flow_field_label_key_ph": "Напр: step_dim_text",
+    "flow_field_label": "Текст питання (якщо не використовуєте переклад)",
+    "flow_field_label_ph": "Введіть текст питання, який побачить користувач...",
+    "flow_options_title": "Кнопки вибору:",
+    "flow_err_option_val": "Вкажіть значення",
+    "flow_option_val_ph": "Значення (val)",
+    "flow_err_option_label": "Вкажіть текст кнопки",
+    "flow_option_label_ph": "Текст кнопки",
+    "flow_option_label_key_ph": "Ключ перекладу",
+    "flow_add_option": "Додати кнопку",
+    "flow_add_step": "Додати новий крок",
+    "flow_save": "Зберегти структуру",
+    "msg_flow_saved": "Структуру опитування збережено!",
+    "err_save_flow": "Помилка збереження структури.",
+
+    "admins_title": "Адміністратори",
+    "admins_current": "Поточні адміністратори",
+    "admins_none": "Немає налаштованих адміністраторів",
+    "admin_chat_id_ph": "Chat ID",
+    "admin_add": "Додати адміністратора",
+    "err_admin_chat_id": "Введіть Chat ID",
+    "msg_admin_added": "Адміністратора додано",
+    "err_add_admin": "Помилка додавання адміністратора",
+    "msg_admin_removed": "Адміністратора видалено",
+    "err_remove_admin": "Помилка видалення адміністратора",
+
+    "broadcast_title": "Розсилка",
+    "broadcast_card": "Надіслати повідомлення всім клієнтам",
+    "broadcast_ph": "Введіть текст повідомлення для розсилки...",
+    "broadcast_send": "Надіслати розсилку",
+    "err_broadcast_empty": "Введіть текст повідомлення",
+    "msg_broadcast_sent": "Розсилку відправлено",
+    "err_broadcast": "Помилка відправки розсилки"
   },
 
   "customers": {
@@ -185,7 +233,10 @@
     "err_load": "Помилка завантаження клієнтів",
     "msg_updated": "Клієнта оновлено",
     "err_update": "Помилка оновлення",
-    "orders_history": "Історія замовлень"
+    "orders_history": "Історія замовлень",
+    "col_id": "ID",
+    "col_notes": "Нотатки",
+    "pagination": "{{from}}-{{to}} з {{total}}"
   },
 
   "templates": {
