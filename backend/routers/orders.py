@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, date
 from io import BytesIO, StringIO
 import csv
 import database
@@ -24,13 +24,17 @@ class OrderBase(BaseModel):
     photo_file_id: Optional[str]
     created_at: datetime
     internal_note: Optional[str]
+    price: Optional[float] = None
+    price_currency: Optional[str] = None
+    price_status: Optional[str] = None
+    deadline: Optional[date] = None
 
 class OrderUpdate(BaseModel):
     status: Optional[str] = None
     internal_note: Optional[str] = None
     price: Optional[float] = None
     currency: Optional[str] = None
-    deadline: Optional[str] = None
+    deadline: Optional[date] = None
 
 class OrderStats(BaseModel):
     total_orders: int
@@ -322,10 +326,23 @@ async def update_order(
             database.update_order_field(order_id, 'internal_note', order_update.internal_note)
 
         if order_update.price is not None:
-            database.set_order_price(order_id, order_update.price, order_update.currency or 'UAH')
+            old_price = current_order.get('price')
+            new_price = order_update.price
+            new_currency = order_update.currency or 'UAH'
+            
+            if old_price != new_price or current_order.get('price_currency') != new_currency:
+                database.set_order_price(order_id, new_price, new_currency)
+                # Уведомляем клиента о новой цене
+                await send_price_notification(
+                    current_order['user_id'],
+                    order_id,
+                    new_price,
+                    new_currency
+                )
 
         if order_update.deadline is not None:
-            database.set_order_deadline(order_id, order_update.deadline)
+            if current_order.get('deadline') != order_update.deadline:
+                database.set_order_deadline(order_id, order_update.deadline)
 
         return {"message": "Order updated successfully"}
     except HTTPException:

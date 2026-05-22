@@ -431,7 +431,7 @@ const Orders = () => {
               status: selectedOrder.status,
               internal_note: selectedOrder.internal_note || '',
               price: selectedOrder.price || undefined,
-              currency: selectedOrder.currency || 'UAH',
+              currency: selectedOrder.price_currency || 'UAH',
               deadline: selectedOrder.deadline ? dayjs(selectedOrder.deadline) : undefined,
             }}
           >
