@@ -20,6 +20,21 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
     }
     setLoading(false);
+
+    // Добавляем перехватчик для обработки 401
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && error.response.status === 401) {
+          logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
   }, []);
 
   const login = async (password) => {
