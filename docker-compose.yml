@@ -14,6 +14,8 @@ services:
       - ADMIN_PANEL_PASSWORD=${ADMIN_PANEL_PASSWORD:-admin123}
       - BOT_ADMIN_PASSWORD=${BOT_ADMIN_PASSWORD:-botadmin123}
       - WAIT_FOR_DB=true
+    volumes:
+      - .:/app
     networks:
       - turner-network
 

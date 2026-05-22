@@ -46,7 +46,13 @@ async def get_survey_flow():
     flow_raw = cfg.get('survey_flow', '[]')
     if isinstance(flow_raw, str):
         import json
-        return json.loads(flow_raw)
+        try:
+            # Clean string from potential hidden control characters
+            clean_raw = "".join(ch for ch in flow_raw if ord(ch) >= 32 or ch in "\n\r\t")
+            return json.loads(clean_raw)
+        except Exception as e:
+            logging.error(f"Survey Flow JSON error: {e}. Raw: {flow_raw[:100]}...")
+            return []
     return flow_raw
 
 async def ask_step(message: types.Message, state: FSMContext, step_index: int = 0):
@@ -372,16 +378,19 @@ async def notify_admin(order_id):
     al = _admin_lang()
     order = database.get_order(order_id)
     data = order.get('order_data') or {}
+    logging.info(f"Notifying admin for order {order_id}. Data: {data}")
 
+    # Map new flow IDs to the keys expected by msg_new_order_admin
+    # New Flow IDs: service_type, material, dimensions_qty, urgency, extra_info
     text = i18n.t('msg_new_order_admin', al,
         order_id=order['id'],
         full_name=order['full_name'],
         username=order['username'],
-        work_type=data.get('work_type', ''),
-        dimensions=data.get('dimensions', ''),
-        conditions=data.get('conditions', ''),
+        work_type=data.get('service_type', ''),
+        dimensions=data.get('dimensions_qty', ''),
+        conditions=data.get('material', ''),
         urgency=data.get('urgency', ''),
-        comment=data.get('comment', '')
+        comment=data.get('extra_info', '')
     )
     for admin_id in admins:
         try:
