@@ -230,27 +230,55 @@ async def get_order_invoice(
             raise HTTPException(status_code=404, detail="Order not found")
 
         pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Helvetica", "B", 20)
-        pdf.cell(0, 15, f"Invoice #{order_id}", ln=True, align="C")
+        
+        # Добавляем Unicode шрифт для поддержки кириллицы
+        font_family = "Helvetica"
+        font_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "DejaVuSans.ttf")
+        if not os.path.exists(font_path):
+             font_path = "DejaVuSans.ttf"
+             
+        if os.path.exists(font_path):
+            try:
+                pdf.add_font("DejaVu", "", font_path)
+                pdf.set_font("DejaVu", "", 12)
+                font_family = "DejaVu"
+            except Exception as e:
+                print(f"Error loading font {font_path}: {e}")
+                pdf.set_font("Helvetica", "", 12)
+        else:
+            pdf.set_font("Helvetica", "", 12)
 
-        pdf.set_font("Helvetica", "", 11)
+        pdf.add_page()
+        
+        def clean_text(text):
+            if not text: return ""
+            # Кодируем в latin-1, игнорируя символы, которые шрифт не поддерживает (например, кириллицу или эмодзи)
+            # Это временное решение, пока не будет подключен полноценный Unicode шрифт
+            try:
+                return str(text).encode("latin-1", "ignore").decode("latin-1")
+            except Exception:
+                return "???"
+
+        pdf.set_font(font_family, "B" if font_family == "Helvetica" else "", 20)
+        pdf.cell(0, 15, clean_text(f"Invoice #{order_id}"), ln=True, align="C")
+
+        pdf.set_font(font_family, "", 11)
         pdf.cell(0, 8, f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}", ln=True)
 
         pdf.ln(5)
-        pdf.set_font("Helvetica", "B", 13)
-        pdf.cell(0, 10, "Customer Information", ln=True)
-        pdf.set_font("Helvetica", "", 11)
-        pdf.cell(0, 7, f"Name: {order.get('full_name', 'N/A')}", ln=True)
+        pdf.set_font(font_family, "B" if font_family == "Helvetica" else "", 13)
+        pdf.cell(0, 10, clean_text("Customer Information"), ln=True)
+        pdf.set_font(font_family, "", 11)
+        pdf.cell(0, 7, f"Name: {clean_text(order.get('full_name', 'N/A'))}", ln=True)
         username = order.get('username')
         if username:
-            pdf.cell(0, 7, f"Username: @{username}", ln=True)
+            pdf.cell(0, 7, f"Username: @{clean_text(username)}", ln=True)
         pdf.cell(0, 7, f"User ID: {order.get('user_id', 'N/A')}", ln=True)
 
         pdf.ln(5)
-        pdf.set_font("Helvetica", "B", 13)
-        pdf.cell(0, 10, "Order Details", ln=True)
-        pdf.set_font("Helvetica", "", 11)
+        pdf.set_font(font_family, "B" if font_family == "Helvetica" else "", 13)
+        pdf.cell(0, 10, clean_text("Order Details"), ln=True)
+        pdf.set_font(font_family, "", 11)
         pdf.cell(0, 7, f"Order ID: {order_id}", ln=True)
         pdf.cell(0, 7, f"Status: {order.get('status', 'N/A')}", ln=True)
 
@@ -259,12 +287,12 @@ async def get_order_invoice(
             pdf.ln(3)
             for key, value in order_data.items():
                 label = key.replace('_', ' ').title()
-                pdf.cell(0, 7, f"{label}: {value}", ln=True)
+                pdf.cell(0, 7, f"{clean_text(label)}: {clean_text(value)}", ln=True)
 
         pdf.ln(5)
-        pdf.set_font("Helvetica", "B", 13)
+        pdf.set_font(font_family, "B" if font_family == "Helvetica" else "", 13)
         pdf.cell(0, 10, "Pricing", ln=True)
-        pdf.set_font("Helvetica", "", 11)
+        pdf.set_font(font_family, "", 11)
         price = order.get('price')
         currency = order.get('price_currency', 'UAH')
         if price:
